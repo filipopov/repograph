@@ -1,0 +1,2138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Eval report — repograph v0.4.0</title>
+</head>
+<body>
+<style>
+:root{--plane:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--ink-3:#6b6a64;--hairline:rgba(11,11,11,.10);--grid:#e1e0d9;--inset:rgba(11,11,11,.04);--accent:#2a78d6;--base-fill:#6b6a64;--delta-good:#006300;--good:#067d06;--warning:#8a6100;--critical:#d03b3b;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){:root{--plane:#0d0d0d;--surface:#1a1a19;--ink:#ffffff;--ink-2:#c3c2b7;--ink-3:#898781;--hairline:rgba(255,255,255,.10);--grid:#2c2c2a;--inset:rgba(255,255,255,.05);--accent:#3987e5;--base-fill:#898781;--delta-good:#0ca30c;--good:#0ca30c;--warning:#fab219;--critical:#e06c6c;color-scheme:dark}}
+:root[data-theme="dark"]{--plane:#0d0d0d;--surface:#1a1a19;--ink:#ffffff;--ink-2:#c3c2b7;--ink-3:#898781;--hairline:rgba(255,255,255,.10);--grid:#2c2c2a;--inset:rgba(255,255,255,.05);--accent:#3987e5;--base-fill:#898781;--delta-good:#0ca30c;--good:#0ca30c;--warning:#fab219;--critical:#e06c6c;color-scheme:dark}
+:root[data-theme="light"]{--plane:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--ink-3:#6b6a64;--hairline:rgba(11,11,11,.10);--grid:#e1e0d9;--inset:rgba(11,11,11,.04);--accent:#2a78d6;--base-fill:#6b6a64;--delta-good:#006300;--good:#067d06;--warning:#8a6100;--critical:#d03b3b;color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:var(--plane);color:var(--ink);
+  font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;
+  -webkit-text-size-adjust:100%}
+.wrap{max-width:880px;margin:0 auto;padding:40px 24px 64px;display:flex;flex-direction:column;gap:20px}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+header h1{margin:2px 0 0;font-size:24px;font-weight:600;line-height:1.25;text-wrap:balance}
+.meta{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;color:var(--ink-2);font-size:13px}
+.meta .num{font-variant-numeric:tabular-nums lining-nums}
+.banner{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;
+  border:1px solid var(--hairline);background:var(--surface);font-size:13px}
+.banner .chip-warn{color:var(--warning);font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--hairline);border-radius:10px;padding:14px 16px;
+  display:flex;flex-direction:column;gap:4px}
+.tile .label{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.tile .value{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums lining-nums;line-height:1.1}
+.tile.hero .value{font-family:Georgia,"Times New Roman",serif;font-weight:400;font-size:48px}
+.tile .sub{font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.tile .value.delta-pos{color:var(--delta-good)}
+.tile .value.delta-neg{color:var(--critical)}
+.toolbar{display:flex;gap:8px;justify-content:flex-end}
+.toolbar button{font:12px system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink-2);
+  background:var(--surface);border:1px solid var(--hairline);border-radius:6px;padding:4px 10px;cursor:pointer}
+.toolbar button:hover{color:var(--ink)}
+.toolbar button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.case{background:var(--surface);border:1px solid var(--hairline);border-radius:10px;padding:18px 20px;
+  display:flex;flex-direction:column;gap:10px}
+.case-regressed{border-left:3px solid var(--critical)}
+.verdict{margin:6px 0 0;font-size:15px}
+.verdict .delta{font-size:15px}
+.flag{font-size:11px;font-weight:600;color:var(--warning);white-space:nowrap}
+.star{color:var(--warning);font-size:.45em;vertical-align:super;line-height:0;cursor:help}
+.legend summary{cursor:pointer;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2)}
+.legend-list{margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--ink-2)}
+.case-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.case-head h2{margin:0;font-size:16px;font-weight:600}
+.case-head .spacer{flex:1}
+.case-score{font-size:15px;font-weight:600}
+.mono{font:12px "SF Mono",ui-monospace,Menlo,Consolas,monospace}
+.num{font-variant-numeric:tabular-nums lining-nums}
+.muted{color:var(--ink-3);font-size:12px}
+.meter{display:inline-block;position:relative;width:120px;height:6px;border-radius:4px;background:var(--grid);
+  vertical-align:middle}
+.meter>span{display:block;height:100%;border-radius:4px;max-width:100%}
+.meter .tick{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink-3);border-radius:1px}
+.m-accent>span{background:var(--accent)}
+.m-base>span{background:var(--base-fill)}
+.delta{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.delta-pos{color:var(--delta-good)}
+.delta-neg{color:var(--critical)}
+.delta-zero{color:var(--ink-3)}
+details.section{border-top:1px solid var(--grid);padding-top:10px}
+details.section>summary{cursor:pointer;font-size:12px;font-weight:600;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--ink-2);list-style-position:outside;margin-left:2px}
+details.section>summary:hover{color:var(--ink)}
+details.section[open]>summary{margin-bottom:8px}
+.md{display:flex;flex-direction:column;gap:8px;background:var(--inset);border-radius:8px;
+  padding:12px 14px;overflow-wrap:break-word}
+.md>:first-child{margin-top:0}
+.md h1,.md h2,.md h3,.md h4,.md h5,.md h6{margin:4px 0 0;font-size:1em;font-weight:600;line-height:1.3}
+.md p,.md ul,.md ol,.md blockquote,.md table,.md pre,.md hr{margin:0}
+.md ul,.md ol{display:flex;flex-direction:column;gap:4px;padding-left:20px}
+.md blockquote{border-left:2px solid var(--hairline);padding-left:10px;color:var(--ink-2)}
+.md :not(pre)>code{background:var(--inset);padding:1px 4px;border-radius:4px;
+  font:.92em "SF Mono",ui-monospace,Menlo,Consolas,monospace}
+.md pre{background:var(--inset);border:1px solid var(--hairline);padding:10px 12px;border-radius:6px;
+  overflow-x:auto;font:12px/1.5 "SF Mono",ui-monospace,Menlo,Consolas,monospace}
+.md pre code{background:none;padding:0;font:inherit}
+.md table{width:100%;border-collapse:collapse}
+.md th,.md td{padding:5px 8px;text-align:left;vertical-align:top;border-bottom:1px solid var(--grid)}
+.md th{font-weight:600;color:var(--ink-2)}
+.md a{color:var(--accent);text-decoration:none}
+.md a:hover{text-decoration:underline}
+.grader-def{display:flex;flex-direction:column;gap:6px;padding:8px 0}
+.grader-def+.grader-def{border-top:1px solid var(--grid)}
+.grader-def-head{display:flex;align-items:baseline;gap:8px}
+.grader-name{font:13px "SF Mono",ui-monospace,Menlo,Consolas,monospace;font-weight:600}
+.badge{font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2);
+  border:1px solid var(--hairline);border-radius:999px;padding:1px 8px}
+.config{display:flex;flex-direction:column;gap:2px;background:var(--inset);border-radius:8px;padding:10px 14px}
+.config code{font:12px "SF Mono",ui-monospace,Menlo,Consolas,monospace;overflow-wrap:anywhere}
+.arm{display:flex;flex-direction:column;gap:8px;padding:6px 0}
+.arm+.arm{border-top:1px dashed var(--grid);margin-top:4px;padding-top:12px}
+.arm-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.arm-label{font-size:13px;font-weight:600}
+.run{border:1px solid var(--grid);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.run-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.run-title{font-size:12px;font-weight:600;color:var(--ink-2)}
+.run-error .explanation{color:var(--ink-2)}
+.note{font-size:12px;color:var(--ink-2)}
+.graders{display:flex;flex-direction:column;gap:4px}
+details.grader{border-radius:6px}
+details.grader>summary{cursor:pointer;display:flex;align-items:baseline;gap:8px;padding:3px 4px;
+  border-radius:6px;list-style:none}
+details.grader>summary::-webkit-details-marker{display:none}
+details.grader>summary::before{content:'▸';font-size:10px;color:var(--ink-3);flex:none;
+  transition:transform .12s ease}
+details.grader[open]>summary::before{transform:rotate(90deg)}
+details.grader>summary:hover{background:var(--inset)}
+details.grader>summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.grader-body{padding:6px 8px 8px 24px;display:flex;flex-direction:column;gap:6px}
+.chip{font-size:11px;font-weight:600;border-radius:999px;padding:1px 8px;white-space:nowrap}
+.chip-pass{color:var(--good);border:1px solid currentColor}
+.chip-fail{color:var(--critical);border:1px solid currentColor}
+.chip.chip-warn{color:var(--warning);border:1px solid currentColor}
+.explanation{margin:0;font-size:13px;color:var(--ink-2);white-space:pre-wrap;overflow-wrap:break-word}
+.kv{display:flex;gap:8px;font-size:12px;color:var(--ink-3)}
+.votes{font-variant-numeric:tabular-nums;letter-spacing:.1em}
+pre.evidence{margin:0;background:var(--inset);border:1px solid var(--hairline);border-radius:6px;
+  padding:8px 10px;overflow-x:auto;max-height:320px;
+  font:12px/1.5 "SF Mono",ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:break-word}
+footer{color:var(--ink-3);font-size:12px;text-align:center;padding-top:8px}
+@media (prefers-reduced-motion:no-preference){
+  details.grader>summary,.toolbar button{transition:background .12s ease,color .12s ease}
+}
+@media (prefers-reduced-motion:reduce){
+  details.grader>summary::before{transition:none}
+}
+@media print{
+  :root,:root[data-theme="dark"],:root[data-theme="light"]{--plane:#f9f9f7;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--ink-3:#6b6a64;--hairline:rgba(11,11,11,.10);--grid:#e1e0d9;--inset:rgba(11,11,11,.04);--accent:#2a78d6;--base-fill:#6b6a64;--delta-good:#006300;--good:#067d06;--warning:#8a6100;--critical:#d03b3b;color-scheme:light}
+  body{background:#fff}
+  .toolbar{display:none}
+  .case,.run,.grader-def{break-inside:avoid}
+  pre.evidence{max-height:none}
+}
+</style>
+<div class="wrap">
+<header>
+<div class="eyebrow">Plugin eval report</div>
+<h1>repograph v0.4.0</h1>
+<p class="verdict">Plugin effect: <span class="delta delta-pos">↑ +2.8 pts</span> vs baseline — improved 1 · flat 3 · regressed 0 of 4 cases.</p>
+<div class="meta">
+<span class="mono">.</span>
+<span>Claude Code v2.1.331</span>
+<span class="num">2026-11-23 22:31 UTC</span>
+<span class="num">3m 30s</span>
+<span class="num">$5.41</span>
+<span class="num">24 runs</span>
+<span class="num">4 in flight</span>
+
+
+<span>judge default</span>
+<span class="num">threshold 0%</span>
+
+</div>
+</header>
+
+<section class="tiles">
+<div class="tile hero"><span class="label">Suite score · with plugin</span><span class="value">97.2%</span><span class="sub">mean of per-case scores</span></div>
+<div class="tile"><span class="label">Ablation Δ</span><span class="value num delta-pos">↑ +2.8</span><span class="sub">score points vs baseline, 4 of 4 cases</span></div>
+<div class="tile"><span class="label">Baseline score</span><span class="value num">94.4%</span><span class="sub">without the plugin</span></div>
+<div class="tile"><span class="label">Cases</span><span class="value num">4</span><span class="sub">4 of 4 ≥ 0% threshold</span></div>
+<div class="tile"><span class="label">Perfect runs</span><span class="value num">91.7%</span><span class="sub">runs where every grader passed</span></div>
+</section>
+<details class="section legend">
+<summary>How to read this report</summary>
+<ul class="legend-list">
+<li>A run's score is the weighted fraction of its graders that passed; a "perfect" run passed every grader.</li>
+<li>A case's score is the mean of its runs; a case passes when its score is at or above the 0% threshold (the tick on each case bar).</li>
+<li>The suite score is the mean of the per-case scores.</li>
+<li>Judge votes are independent samples of the LLM judge; the majority decides pass or fail.</li>
+<li>"With plugin" and "Baseline" runs are identical except for the plugin being loaded; Δ is the with-plugin score minus the baseline score.</li>
+
+</ul>
+</details>
+<div class="toolbar"><button type="button" data-act="expand">Expand all</button><button type="button" data-act="collapse">Collapse all</button></div>
+<article class="case" id="case-1">
+<div class="case-head">
+<h2>account-currency</h2>
+<span class="muted mono">evals/account-currency</span>
+<span class="spacer"></span>
+
+<span class="delta delta-pos">↑ +11.1 pts</span>
+<span class="muted">with plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:88.9%"></span><i class="tick" style="left:0.0%"></i></span>
+<span class="num case-score">88.9%</span>
+</div>
+
+<details class="section" open>
+<summary>Results</summary>
+<section class="arm">
+<div class="arm-head">
+<span class="arm-label">With plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:88.9%"></span></span>
+<span class="num">88.9%</span>
+<span class="muted num">66.7% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:66.7%"></span></span>
+<span class="num">66.7%</span>
+<span class="muted num">13 turns · $0.24 · 22:31:51 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">accounts-controller</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched AccountController\.java</p>
+
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">gateway-client</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">gateway-controller</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched GatewayController\.java</p>
+
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">payments-client</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">public-api</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /api/v1/accounts</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">risk-reasoning</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">**Short answer:** no consumer reads `currency` today, but every service that deserializes `AccountDto` gets a different JSON shape. Five production files in four repos are affected. Two public gateway endpoints pass the new shape straight to clients outside this workspace. No Kafka topic carries `AccountDto`.
+
+## Affected production files
+
+**bank-contracts**
+- `src/main/java/dev/demobank/contracts/AccountDto.java:5`: change `String currency` to `Currency currency`. Add the `Currency` enum, with `@JsonFormat(shape = JsonFormat.Shape.OBJECT)` so it serialises as an object. If a client sends the old string, decoding fails unless you add a `@JsonCreator` that also accepts a plain string. Every other repo depends on this module, so it is the source of the change.
+
+**accounts-service** (the producer)
+- `AccountController.java:43-44` (`toDto`): `new AccountDto(..., account.currency(), ...)` stops compiling. Convert the value, for example `Currency.valueOf(account.currency())`, or change the domain model as well.
+- `Account.java:5` (optional): the internal `Account` record also stores `String currency`. You can leave it, but if you change it, two more places follow:
+  - `AccountService.java:51-53` (`checkCurrency`) compares `account.currency()` with `MoneyMovementRequest.currency()`, which is still a String.
+  - `CurrencyMismatchException.java:9` takes the currency as Strings.
+- The four endpoints whose responses carry the new shape: `GET /accounts`, `GET /accounts/{id}`, `POST /accounts/{id}/debit`, `POST /accounts/{id}/credit` (`AccountController.java:23-39`).
+
+**gateway-service** (it decodes the response and passes it on unchanged)
+- `client/AccountsClient.java:13,16`: `list()` and `get()` decode `GET /accounts` and `GET /accounts/{id}` into `AccountDto`. No code change, but the service must be rebuilt against the new contracts. Until then, decoding fails when accounts-service sends an object where a String is expected.
+- `GatewayController.java:38-45`: re-exposes the DTO as-is on `GET /api/v1/accounts` and `GET /api/v1/accounts/{id}`.
+
+**payments-service** (it decodes the response but never reads `currency`)
+- `client/AccountsClient.java:15,18,21`: `get`, `debit` and `credit` return `AccountDto`. No code change, but it must be rebuilt.
+- **Risk in `PaymentService.java:59-76`:** the return values of `debit` and `credit` are discarded, but the response body is still decoded. On the old contract that decoding fails with a client exception that is not a `RestClientResponseException`, so the `catch` blocks don&apos;t handle it. Result: the debit has already happened in accounts-service, the exception escapes, and no reversing credit runs. The payment is never saved and no `payments.completed` event is sent. That loses money silently, so payments-service must be upgraded before accounts-service, or the response shape must stay compatible. Alternatively, change these methods to return `void` or `ResponseEntity&lt;Void&gt;` so the body is never decoded.
+
+**Not affected:** fraud-service and notifications-service. `currency` in `FraudCheckRequest`, `MoneyMovementRequest`, `PaymentRequest`, `PaymentDto` and `PaymentCompletedEvent` is a separate field and stays a String.
+
+## Endpoints and topics
+| Endpoint | Callers in workspace |
+|---|---|
+| accounts `GET /accounts` | gateway |
+| accounts `GET /accounts/{id}` | gateway, payments (`get` is declared but not called in production code) |
+| accounts `POST /accounts/{id}/debit`, `/credit` | payments |
+| gateway `GET /api/v1/accounts` | **nobody (likely public API)** |
+| gateway `GET /api/v1/accounts/{id}` | **nobody (likely public API)** |
+
+No Kafka topic carries the change. The only topic, `payments.completed`, carries `PaymentCompletedEvent`, which has its own String `currency`.
+
+## Consumers outside the workspace
+- **Gateway `/api/v1/accounts` and `/api/v1/accounts/{id}`:** for external clients (frontends, mobile apps, partners), `&quot;currency&quot;: &quot;EUR&quot;` becomes an object. That is a breaking API change. Version the endpoint, or map back to a String in the gateway.
+- **The accounts-service `/accounts*` endpoints:** they may also be called directly by services this static graph can&apos;t see.
+- **The bank-contracts artifact:** if it&apos;s published, other teams&apos; code compiled against it breaks on `currency()`.
+
+## Suggested rollout order
+1. Release bank-contracts with a `Currency` type that accepts both a String and an object when decoding.
+2. Rebuild and deploy payments-service and gateway-service on that version. If needed, keep the gateway&apos;s public response as a String.
+3. Deploy accounts-service sending the object.
+
+## How I checked
+I used the repograph impact analysis and usage search, then confirmed with grep over all `src/main` code. The static graph can&apos;t see runtime base URLs or callers outside the workspace. I made no changes to any files.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">used-repograph</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">matched mcp__plugin_repograph_repograph__</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">17 turns · $0.28 · 22:31:51 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">accounts-controller</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched AccountController\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">gateway-client</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched gateway[^\n]{0,120}AccountsClient|AccountsClient[^\n]{0,120}gateway</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">gateway-controller</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched GatewayController\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payments-client</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched payments[^\n]{0,120}AccountsClient|AccountsClient[^\n]{0,120}payments</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">public-api</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /api/v1/accounts</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">risk-reasoning</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">## Summary
+
+`AccountDto` is the shared record in **bank-contracts** (`src/main/java/dev/demobank/contracts/AccountDto.java:5`): `record AccountDto(String id, String owner, String currency, BigDecimal balance)`.
+
+- **Only one place fails to compile:** `accounts-service`&apos;s `toDto`. No production code anywhere reads `AccountDto.currency()`. The repograph graph and a grep agree on this.
+- **The real risk is the JSON change.** `&quot;currency&quot;: &quot;CHF&quot;` becomes `&quot;currency&quot;: {...}`. Any service still built against the old String contract will fail to read the new JSON. That breaks every caller of the accounts endpoints, and it is dangerous in payments-service.
+
+## Production files affected
+
+**bank-contracts**
+| File | Change |
+|---|---|
+| `contracts/AccountDto.java:5` | Change `String currency` to `Currency currency`. |
+| *(new)* `contracts/Currency.java` | Add the enum. Annotate it with `@JsonFormat(shape = OBJECT)` (or give it a custom serializer) so it is written as an object. Also give it a `@JsonCreator` that accepts both a plain string and the object, so services can read both shapes while they are upgraded. |
+
+**accounts-service** (producer)
+| File | Change |
+|---|---|
+| `accounts/AccountController.java:43-45` (`toDto`) | **Fails to compile.** It passes `account.currency()`, a String. Change it to convert to the enum, or change the domain model as below. |
+| `accounts/Account.java:5` | Optional. Make `currency` a `Currency` too, so the model and the DTO use the same type. |
+| `accounts/AccountService.java:51-53` (`checkCurrency`) | Only needed if `Account.currency` becomes the enum. It compares `account.currency()` with `MoneyMovementRequest.currency`, which stays a String. Without a change, `.equals` would always be false and every debit and credit would be rejected. It needs an explicit conversion. |
+| `accounts/CurrencyMismatchException.java:9` | Only needed if the above changes. Its constructor takes String currencies. |
+
+**gateway-service** (consumer and re-exposer)
+| File | Change |
+|---|---|
+| `gateway/client/AccountsClient.java:13-17` (`list`, `get`) | No code change. It must be rebuilt against the new bank-contracts, otherwise it cannot read the new object JSON. |
+| `gateway/GatewayController.java:38-46` (`accounts`, `account`) | No code change. It passes `AccountDto` straight through, so the new shape goes out to public clients. |
+
+**payments-service** (consumer)
+| File | Change |
+|---|---|
+| `payments/client/AccountsClient.java:15-22` (`get`, `debit`, `credit`) | No code change, but it must be rebuilt against the new bank-contracts. |
+| `payments/PaymentService.java:59-76` | No code change, but this is the most dangerous spot. The `AccountDto` returned by debit and credit is ignored, yet `RestClient` still reads the response. If payments-service is still on the old contract when accounts-service starts sending the object, reading the response fails *after* the debit or credit has already happened on the accounts side. That failure is a `RestClientException` rather than the `RestClientResponseException` the code catches, so the exception escapes. The result: money debited with no credit and no reversal, or a credit applied with no payment record and no `payments.completed` event. |
+
+**Not affected:** fraud-service and notifications-service. `FraudCheckRequest`, `MoneyMovementRequest`, `PaymentDto`, `PaymentRequest` and `PaymentCompletedEvent` all have their own String `currency` fields and are unaffected, unless you decide to switch them to the enum for consistency. That would be a separate, wider change.
+
+## Endpoints and topics carrying the change
+
+**HTTP (internal, accounts-service):**
+- `GET /accounts`, called by gateway-service.
+- `GET /accounts/{id}`, called by payments-service (client method only, no production call site) and gateway-service.
+- `POST /accounts/{id}/debit`, called by payments-service.
+- `POST /accounts/{id}/credit`, called by payments-service.
+
+**HTTP (public, gateway-service):**
+- `GET /api/v1/accounts`
+- `GET /api/v1/accounts/{id}`
+
+**Kafka:** none. The only topic, `payments.completed`, carries `PaymentCompletedEvent`, which does not contain `AccountDto`.
+
+## Consumers outside this workspace
+
+- **Gateway `GET /api/v1/accounts` and `GET /api/v1/accounts/{id}`.** No repo in the workspace calls them. `GatewayController` is documented as the &quot;Public API&quot;, so web or mobile apps and partners almost certainly read `currency` as a string. This is a breaking change to a public API: version it (e.g. `/api/v2`) or map back to a String in the gateway.
+- **The internal `/accounts/*` endpoints.** Static analysis can only see in-workspace callers. Anything else hitting accounts-service directly (ops tools, reporting, other teams) is invisible to it.
+- **`bank-platform`** is not a Java repo. It is not affected: `smoke-test.sh` and the README only use `currency` in payment requests, not account responses.
+
+## Rollout order
+
+1. **bank-contracts:** add the enum, using a deserializer that accepts both the string and the object.
+2. **payments-service and gateway-service:** rebuild and deploy on the new contract before accounts-service changes, so both can read either shape.
+3. **accounts-service:** only now start sending the object.
+4. **Gateway public API:** decide separately whether to version it or keep sending a string.
+
+All of this comes from static analysis (repograph plus grep). It cannot see `@JsonProperty` or reflection tricks, runtime configuration, or callers outside the workspace.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">used-repograph</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">matched mcp__plugin_repograph_repograph__</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">16 turns · $0.29 · 22:31:51 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">accounts-controller</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched AccountController\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">gateway-client</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched gateway[^\n]{0,120}AccountsClient|AccountsClient[^\n]{0,120}gateway</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">gateway-controller</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched GatewayController\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payments-client</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched payments[^\n]{0,120}AccountsClient|AccountsClient[^\n]{0,120}payments</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">public-api</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /api/v1/accounts</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">risk-reasoning</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS FAIL PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✗ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">You described this as an accounts-service change, but `AccountDto` lives in the shared **bank-contracts** module, not in accounts-service. Changing it changes the JSON that every service using this DTO sends and receives. No production code reads `currency` from an `AccountDto` (no getter calls), so the risk is mainly the change in JSON shape.
+
+## Affected production source files
+
+| Repository | File | What has to change |
+|---|---|---|
+| bank-contracts | `src/main/java/dev/demobank/contracts/AccountDto.java:5` | Change `String currency` to `Currency currency`. |
+| bank-contracts | *new* `Currency.java` | Add the enum with object serialisation (`@JsonFormat(shape = OBJECT)` or a custom serialiser). For the rollout it should also have a `@JsonCreator` that accepts a plain string like `&quot;CHF&quot;`. |
+| accounts-service | `src/main/java/dev/demobank/accounts/AccountController.java:43-44` | **Compile break.** `toDto` passes `account.currency()` (a String) into the constructor, so it needs a conversion such as `Currency.valueOf(...)`. This is the only place an `AccountDto` is built. |
+| accounts-service | `Account.java:5`, `AccountService.java:51-53`, `CurrencyMismatchException.java:9` | Optional. The internal model can keep `String`. If you move it to the enum too, `checkCurrency` must still compare against `MoneyMovementRequest.currency`, which stays a String. |
+| payments-service | `src/main/java/dev/demobank/payments/client/AccountsClient.java:15-22` | No code change, but needs the new contracts version. It turns the `AccountDto` responses of `get`, `debit` and `credit` back into objects (deserialises them). |
+| gateway-service | `src/main/java/dev/demobank/gateway/client/AccountsClient.java:13-17` | No code change, but needs the new contracts version. It deserialises the responses of `list` and `get`. |
+| gateway-service | `src/main/java/dev/demobank/gateway/GatewayController.java:38-46` | No code change. It returns `AccountDto` unchanged, so the new shape reaches public clients. |
+
+fraud-service and notifications-service are not affected.
+
+## Where the change travels
+
+**HTTP:**
+- **accounts-service**
+  - `GET /accounts`: called by gateway-service
+  - `GET /accounts/{id}`: called by payments-service and gateway-service
+  - `POST /accounts/{id}/debit` and `POST /accounts/{id}/credit`: called by payments-service; the change is in the response body
+- **gateway-service**
+  - `GET /api/v1/accounts` and `GET /api/v1/accounts/{id}`: nobody in the workspace calls these
+
+**Kafka:** none. The only topic, `payments.completed`, carries `PaymentCompletedEvent`, which has its own `String currency` and does not use `AccountDto`.
+
+## Things that break without a compile error
+- **Mixed versions during rollout fail at runtime.** A consumer built against the old String version can&apos;t read an object, and a consumer with the new enum can&apos;t read a string unless the `@JsonCreator` above exists.
+- **payments-service is the dangerous case.** In `PaymentService.java:59-76`, if the response from `debit` can&apos;t be read, the money has already been taken out on the server. The error isn&apos;t a `RestClientResponseException`, so the catch blocks miss it: there&apos;s no credit, no reversal and no saved payment record. The same applies to the `credit` response and the compensating credit at line 73. The service ignores the response bodies anyway, so the shape mismatch is the only reason it fails.
+- **gateway-service** returns errors on `/api/v1/accounts*` if its contracts version doesn&apos;t match accounts-service.
+
+## Possible consumers outside this workspace
+- **`GET /api/v1/accounts` and `GET /api/v1/accounts/{id}`**: `GatewayController` is documented as the &quot;Public API&quot; (line 22), so external clients will see `currency` change from `&quot;CHF&quot;` to an object. That breaks them. Consider a `/api/v2` endpoint, or have the gateway keep returning the string form.
+- **The accounts-service `/accounts*` endpoints** could have callers that the code analysis can&apos;t see.
+- **The `bank-contracts` artifact** (`0.1.0-SNAPSHOT`) may be a dependency of repositories outside this workspace. Publish the change as a new version, not over the existing snapshot.
+
+## Suggested rollout order
+1. Release bank-contracts with the enum, with reading that accepts both a string and an object, but keep sending the string.
+2. Update payments-service and gateway-service to that version.
+3. Update accounts-service and switch to sending the object.
+4. Decide separately what the public gateway API should return.
+
+This comes from the static code graph plus a grep and reading the files. It can&apos;t see runtime settings or callers outside the workspace.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">used-repograph</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">matched mcp__plugin_repograph_repograph__</p>
+
+</div>
+</details></div>
+</div>
+</section><section class="arm">
+<div class="arm-head">
+<span class="arm-label">Baseline (no plugin)</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:77.8%"></span></span>
+<span class="num">77.8%</span>
+<span class="muted num">33.3% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:66.7%"></span></span>
+<span class="num">66.7%</span>
+<span class="muted num">17 turns · $0.27 · 22:31:51 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">accounts-controller</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched AccountController\.java</p>
+
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">gateway-client</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">gateway-controller</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched GatewayController\.java</p>
+
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">payments-client</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">public-api</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /api/v1/accounts</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">risk-reasoning</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">I traced every production use of `AccountDto` and the account `currency` field across the six repos.
+
+## What&apos;s affected
+
+`AccountDto` is only sent over **HTTP**. **No Kafka topic carries it.** The only topic, `payments.completed`, carries `PaymentCompletedEvent`, which has its own `String currency` field and does not use `AccountDto`. fraud-service and notifications-service are not affected.
+
+### bank-contracts
+**`AccountDto.java`** (`bank-contracts/src/main/java/dev/demobank/contracts/AccountDto.java:5`)
+- Change `String currency` to `Currency currency`.
+- Add a new `Currency.java` enum to bank-contracts. Annotate it with `@JsonFormat(shape = OBJECT)`, or give it a custom serializer *and* deserializer, so it serialises as an object.
+- Since all services share this library, this needs a new release. Every consumer has to upgrade to it together with accounts-service.
+
+### accounts-service (the producer)
+| File | Change |
+|---|---|
+| `AccountController.java:44` | `toDto` passes `account.currency()`, which is a String, into the DTO. It must convert (e.g. `Currency.valueOf(...)`), or `Account` must switch to the enum. |
+| `Account.java:5` | `String currency`. Optional, but switching it to `Currency` keeps the domain and the DTO the same type. |
+| `AccountRepository.java:18-20` | Seed data uses `&quot;CHF&quot;` and `&quot;EUR&quot;` literals. Change only if `Account` switches to the enum. |
+| `AccountService.java:51-53` | `checkCurrency` compares `account.currency().equals(currency)` against `MoneyMovementRequest.currency()`, which stays a String. If `Account` becomes an enum, `equals` silently returns false every time and every debit/credit fails with a currency mismatch. Compare against the enum&apos;s code instead. |
+| `CurrencyMismatchException.java:9` | Takes `String expected`. Change it, or call `.name()`/code when building the message, if `Account` switches. |
+
+These HTTP responses change shape:
+- `GET /accounts`
+- `GET /accounts/{id}`
+- `POST /accounts/{id}/debit`
+- `POST /accounts/{id}/credit`
+
+### payments-service
+| File | Change |
+|---|---|
+| `client/AccountsClient.java:15-22` | Reads `AccountDto` from `GET /accounts/{id}`, `POST /accounts/{id}/debit` and `POST /accounts/{id}/credit`. No code change; it needs the new bank-contracts version. |
+| `PaymentService.java:60, 69, 73` | Calls `debit`/`credit` and discards the result, but the response is still deserialised into `AccountDto`. No code change. However, see the deployment risk below. |
+
+There is a deployment risk here. If accounts-service ships before payments-service is upgraded, the old `String currency` field can&apos;t read the new object. Each debit/credit then throws a deserialisation error, a `RestClientException` that is **not** a `RestClientResponseException`. `PaymentService`&apos;s `catch` blocks don&apos;t handle it. So the debit has already happened on accounts-service, the payment fails with a 500, and the compensating credit never runs: money is lost. Upgrade payments-service first, or make the change tolerant of both formats.
+
+### gateway-service
+| File | Change |
+|---|---|
+| `client/AccountsClient.java:13-17` | Deserialises `GET /accounts` and `GET /accounts/{id}`. Needs the new contracts version, otherwise it hits the same deserialisation failure and returns 500. |
+| `GatewayController.java:38-46` | Passes `AccountDto` straight through. No code change, but the **public** API now changes shape. |
+
+## Consumers outside this workspace
+- **The public API: `GET /api/v1/accounts` and `GET /api/v1/accounts/{id}`.** External clients (web, mobile, partners) receive `currency` as an object instead of a string. This is a breaking change to the public contract, so it should be versioned (e.g. `/api/v2`) or keep a string form in v1.
+- **bank-contracts as a published library.** The README says each service CI workflow checks out `&lt;owner&gt;/bank-contracts` and installs it. Any other repo under that owner that uses `AccountDto` would break when it compiles against the new version. I can&apos;t see those repos from here.
+- **accounts-service&apos;s internal `/accounts/*` endpoints** may have other direct callers besides gateway and payments.
+- **Not code, but will need checking:** `bank-platform/README.md` and `scripts/smoke-test.sh` show currency as a string. The smoke test doesn&apos;t check the account payload today, so it won&apos;t catch this change.
+
+## Suggested rollout
+1. Release bank-contracts with a `Currency` type that can *read* both a string and an object.
+2. Upgrade payments-service and gateway-service to that release.
+3. Then switch accounts-service to writing the object form.
+4. Decide on gateway versioning before external clients see the new shape.</pre>
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">19 turns · $0.32 · 22:32:30 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">accounts-controller</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched AccountController\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">gateway-client</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched gateway[^\n]{0,120}AccountsClient|AccountsClient[^\n]{0,120}gateway</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">gateway-controller</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched GatewayController\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payments-client</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched payments[^\n]{0,120}AccountsClient|AccountsClient[^\n]{0,120}payments</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">public-api</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /api/v1/accounts</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">risk-reasoning</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">The change affects HTTP only, not Kafka. `AccountDto` is in `bank-contracts`, and three services use it: accounts-service builds it, and gateway-service and payments-service read it from accounts-service&apos;s responses. Nothing on the `payments.completed` topic contains `AccountDto`.
+
+## Affected production files
+
+| # | Repo | File | What has to change |
+|---|---|---|---|
+| 1 | **bank-contracts** | `src/main/java/dev/demobank/contracts/AccountDto.java:5` | Change `String currency` to `Currency currency`. |
+| 2 | **bank-contracts** | *new* `Currency.java` | Add the enum. To make Jackson write it as a JSON object, use `@JsonFormat(shape = OBJECT)` or a custom serializer. Jackson also needs a way to read the object back: a `@JsonCreator` taking the object fields, or a custom deserializer. Without that, the gateway and payments clients can&apos;t parse the response. |
+| 3 | **accounts-service** | `AccountController.java:44` (`toDto`) | `account.currency()` is a String. Either convert it here (`Currency.valueOf(...)`) or change the domain model (rows 4–7). |
+| 4 | accounts-service | `Account.java:5` | Optional: change `String currency` to `Currency` so the mapping isn&apos;t needed. |
+| 5 | accounts-service | `AccountRepository.java:18-20` | Only if row 4 is done: the seed data uses `&quot;CHF&quot;` and `&quot;EUR&quot;` literals. |
+| 6 | accounts-service | `AccountService.java:51-54` (`checkCurrency`) | Only if row 4 is done: it compares `account.currency().equals(currency)` against `MoneyMovementRequest.currency()`, which stays a String. With the enum this would compile but always return false, so every debit and credit would fail with `CurrencyMismatchException`. Compare `account.currency().name()` (or similar) instead. |
+| 7 | accounts-service | `CurrencyMismatchException.java:9` | Only if row 4 is done: the constructor takes `String expected`. Change the type or pass `.name()`. |
+| 8 | **gateway-service** | `client/AccountsClient.java:14,17` | No code change, but it must be rebuilt against the new contracts. It reads `GET /accounts` and `GET /accounts/{id}` into `AccountDto`. |
+| 9 | gateway-service | `GatewayController.java:38-46` | No code change. It passes `AccountDto` straight through, so the public response changes shape (see below). |
+| 10 | **payments-service** | `client/AccountsClient.java:16,19,22` | No code change, but it must be rebuilt. `debit` and `credit` read their responses into `AccountDto`. (`get` is declared but never called in production code.) |
+| 11 | payments-service | `PaymentService.java:60,69,73` | Ignores the returned `AccountDto`, but is affected by the deployment risk described below. |
+
+**Not affected:** fraud-service, notifications-service, and the other contract classes. `PaymentRequest`, `PaymentDto`, `MoneyMovementRequest`, `FraudCheckRequest` and `PaymentCompletedEvent` each have their own `String currency` that has nothing to do with `AccountDto`.
+
+## Where the change shows up
+- **HTTP (accounts-service, internal):**
+  - `GET /accounts`
+  - `GET /accounts/{id}`
+  - `POST /accounts/{id}/debit`
+  - `POST /accounts/{id}/credit`
+- **HTTP (gateway-service, public):**
+  - `GET /api/v1/accounts`
+  - `GET /api/v1/accounts/{id}`
+
+  In both, `&quot;currency&quot;:&quot;CHF&quot;` becomes an object.
+- **Kafka:** none. `payments.completed` carries `PaymentCompletedEvent`, which doesn&apos;t use `AccountDto`.
+
+## Consumers outside this workspace
+1. **Public clients of `/api/v1/accounts` and `/api/v1/accounts/{id}`.** The gateway is the public API and doesn&apos;t transform the response, so the new shape goes straight to external clients (web, mobile, partners). This is a breaking change to the `/api/v1` contract. You&apos;d need a new version (`/api/v2`), a gateway-side adapter that keeps the String for v1, or coordination with those clients.
+2. **Other users of the `bank-contracts` artifact.** It&apos;s a published Maven artifact (`0.1.0-SNAPSHOT`), and each service&apos;s CI builds the contracts repo from `&lt;owner&gt;/bank-contracts`. Any other repo under that owner that depends on it would break when compiled. Because it&apos;s a SNAPSHOT, they&apos;d pick the change up silently without a version bump. A real version bump would be safer.
+3. **Direct callers of accounts-service on port 8081**, such as scripts or ops tools. None exist in this workspace: `bank-platform/scripts/smoke-test.sh` only checks payment status and notifications, so it isn&apos;t affected.
+
+## Deployment-order risk in payments-service
+If accounts-service ships the object format before payments-service is rebuilt with the new contracts, Jackson can&apos;t read the debit/credit response. That throws a `RestClientException`, but `PaymentService` only catches `RestClientResponseException`:
+- **Debit:** the debit has already been applied, then the exception escapes. There is no credit, no compensation and no saved payment, so money disappears from the source account.
+- **Credit:** both legs have been applied, but the request returns 500 and no payment is saved or published.
+
+The gateway has the same parsing problem. Its `DownstreamErrorHandler` doesn&apos;t handle this exception either, so the account endpoints would return a plain 500.
+
+To avoid this, roll out a reader that accepts both formats first (a deserializer that takes a String or an object), deploy payments-service and gateway-service, then switch accounts-service to the new format. Catching `RestClientException` in `PaymentService` would also close the gap.</pre>
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:66.7%"></span></span>
+<span class="num">66.7%</span>
+<span class="muted num">12 turns · $0.29 · 22:32:31 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">accounts-controller</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched AccountController\.java</p>
+
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">gateway-client</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">gateway-controller</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched GatewayController\.java</p>
+
+</div>
+</details>
+<details class="grader" open>
+<summary><span class="chip chip-fail">✗ fail</span> <span class="grader-name">payments-client</span>  </summary>
+<div class="grader-body">
+<p class="explanation">pattern not found in last_message</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">public-api</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /api/v1/accounts</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">risk-reasoning</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">I traced `AccountDto` through every repository, excluding `src/test`. It travels only over HTTP: **no Kafka topic carries it**. Only `bank-contracts` and `accounts-service` need code edits. `payments-service` and `gateway-service` deserialise it and only need to be rebuilt and deployed together with the change. I didn&apos;t build or run anything.
+
+## Affected production files
+
+### bank-contracts
+| File | Change |
+|---|---|
+| `src/main/java/dev/demobank/contracts/AccountDto.java:5` | Change `String currency` to `Currency currency`. |
+| **New** `src/main/java/dev/demobank/contracts/Currency.java` | Add the enum. To serialise it as an object, put `@JsonFormat(shape = OBJECT)` on it. Jackson can&apos;t read an enum back from an object by default, so it also needs an `@JsonCreator` factory that accepts the object form. Without that, both HTTP clients below fail to parse responses. The services run Spring Boot 4.1.2, which uses Jackson 3, so use those annotations. Avoid confusion with `java.util.Currency`, through naming or careful imports. |
+| `pom.xml` | Raise the version from `0.1.0-SNAPSHOT`. This is a breaking change to the wire format. |
+
+### accounts-service (producer)
+| File | Change |
+|---|---|
+| `AccountController.java:43-45` (`toDto`) | **Required.** Convert `account.currency()` (a String) to the enum, or pass it straight through if the domain changes too. |
+| `Account.java:5` | Optional: make the `currency` field the enum. |
+| `AccountRepository.java:18-20` | Only if `Account` changes: the seed data `&quot;CHF&quot;`/`&quot;CHF&quot;`/`&quot;EUR&quot;` becomes enum constants. |
+| `AccountService.java:51-54` (`checkCurrency`) | Only if `Account` changes: it compares `account.currency().equals(currency)`, where `currency` comes from `MoneyMovementRequest` and is still a String. Once `Account` uses the enum, this comparison is **always false**, so every debit and credit throws `CurrencyMismatchException` (HTTP 400). Compare against the enum&apos;s code instead, or convert the request value. |
+| `CurrencyMismatchException.java:9` | Only if `Account` changes: the `expected` parameter type. |
+| `pom.xml:22` | Point `bank-contracts.version` at the new version. |
+
+### payments-service (consumer)
+| File | Change |
+|---|---|
+| `client/AccountsClient.java:16,19,22` | No code change, but `get`, `debit` and `credit` all deserialise `AccountDto` responses. |
+| `PaymentService.java:60,69,73` | No code change. It ignores the returned `AccountDto`, but the response is still parsed. |
+| `pom.xml:22` | Raise `bank-contracts.version`. |
+
+**Main risk:** if `accounts-service` ships before `payments-service`, the debit succeeds on the accounts side. Then parsing the response into the old `String currency` fails with a `RestClientException`. That is not a `RestClientResponseException`, so the `catch` at `PaymentService.java:61` doesn&apos;t catch it. Result: **the money is debited, no credit or reversal happens, and the payment is never saved.** Deploy them together, or have `payments-service` accept both formats first.
+
+### gateway-service (consumer and public re-exposer)
+| File | Change |
+|---|---|
+| `client/AccountsClient.java:14,17` | No code change. It deserialises `List&lt;AccountDto&gt;` and `AccountDto`, so it needs the new contracts version. |
+| `GatewayController.java:38-46` | No code change, but the new object format flows straight out to the public API. |
+| `pom.xml:22` | Raise `bank-contracts.version`. |
+
+### Not affected
+- **fraud-service**: it never calls accounts-service.
+- **notifications-service**: its `NotificationService` reads `event.currency()` from `PaymentCompletedEvent`, which is a separate String field.
+- `MoneyMovementRequest`, `PaymentRequest`, `PaymentDto`, `FraudCheckRequest` and `PaymentCompletedEvent`: they each have their own String `currency` and stay as they are, unless you decide to change them for consistency.
+
+## Endpoints and topics carrying the change
+**HTTP, internal (accounts-service, port 8081):**
+- `GET /accounts`
+- `GET /accounts/{id}`
+- `POST /accounts/{id}/debit` (response body)
+- `POST /accounts/{id}/credit` (response body)
+
+**HTTP, public (gateway-service, port 8080):**
+- `GET /api/v1/accounts`
+- `GET /api/v1/accounts/{id}`
+
+**Kafka:** none. `Topics.PAYMENTS_COMPLETED` carries `PaymentCompletedEvent`, which doesn&apos;t contain `AccountDto`.
+
+## Possible consumers outside this workspace
+1. **Public gateway API `/api/v1/accounts[/{id}]`.** The gateway is documented as the public API, so web, mobile and partner clients will see `currency` change from `&quot;CHF&quot;` to an object. That breaks them. Consider a `/api/v2` route, or keeping a string field in the gateway response.
+2. **The `bank-contracts` artifact.** It&apos;s a shared library, and any other repository that depends on it gets a compile-time and wire break when it upgrades. The services&apos; CI checks out `&lt;owner&gt;/bank-contracts` from the matching branch or `main` (`.github/workflows/ci.yml:16-30`). Merging to `bank-contracts` `main` therefore changes every service&apos;s next CI build, including services outside this workspace.
+3. **Direct callers of accounts-service on port 8081.** It&apos;s exposed in `bank-platform/docker-compose.yml`, so other internal tools or scripts may call it directly.
+
+None of the non-Java files (the README, `smoke-test.sh`) check the currency field on accounts, so they don&apos;t need changes.</pre>
+</div>
+</details></div>
+</div>
+</section>
+</details>
+<details class="section" open>
+<summary>Prompt</summary>
+<div class="md"><p>accounts-service wants to change <code>AccountDto.currency</code> from a String to a <code>Currency</code> enum serialised as an object. Which code and which consumers are affected? List every affected production source file (file name and repository), what has to change in it, and say which HTTP endpoints or Kafka topics carry the change. Ignore test code. Point out anything that may have consumers outside this workspace.</p>
+</div>
+</details>
+<details class="section" open>
+<summary>Graders — what "good" means for this case</summary>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">accounts-controller</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;AccountController\\.java&quot;</code></div><div class="kv"><span>flags</span><code>&quot;i&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">gateway-client</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;gateway[^\\n]{0,120}AccountsClient|AccountsClient[^\\n]{0,120}gateway&quot;</code></div><div class="kv"><span>flags</span><code>&quot;i&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">gateway-controller</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;GatewayController\\.java&quot;</code></div><div class="kv"><span>flags</span><code>&quot;i&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">payments-client</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;payments[^\\n]{0,120}AccountsClient|AccountsClient[^\\n]{0,120}payments&quot;</code></div><div class="kv"><span>flags</span><code>&quot;i&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">public-api</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;/api/v1/accounts&quot;</code></div><div class="kv"><span>flags</span><code>&quot;i&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">risk-reasoning</span><span class="badge">llm</span></div>
+<div class="md"><p>The answer explains that changing <code>currency</code> from a JSON string to an object is a wire-format (JSON) break for
+HTTP consumers, not only a compile error, and it warns that the gateway's <code>/api/v1/accounts</code> endpoints are public
+and may have consumers outside the workspace (mobile apps, partners) that cannot be found in the code. It proposes
+a compatible rollout (for example a new field or versioned endpoint, or deploying contracts and consumers first).</p>
+</div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">used-repograph</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;trace&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;mcp__plugin_repograph_repograph__&quot;</code></div><div class="kv"><span>flags</span><code>&quot;&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div><div class="kv"><span>arm</span><code>&quot;with-only&quot;</code></div></div>
+</div>
+</details>
+</article>
+<article class="case" id="case-2">
+<div class="case-head">
+<h2>event-channel</h2>
+<span class="muted mono">evals/event-channel</span>
+<span class="spacer"></span>
+
+<span class="delta delta-zero">· 0.0 pts</span>
+<span class="muted">with plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span><i class="tick" style="left:0.0%"></i></span>
+<span class="num case-score">100%</span>
+</div>
+
+<details class="section" open>
+<summary>Results</summary>
+<section class="arm">
+<div class="arm-head">
+<span class="arm-label">With plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">100% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">15 turns · $0.22 · 22:32:37 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">notification-service</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched NotificationService\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payment-service</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched PaymentService\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">publisher</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched PaymentEventPublisher</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">topic</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched payments\.completed</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">used-repograph</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">matched mcp__plugin_repograph_repograph__</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">14 turns · $0.20 · 22:32:40 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">notification-service</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched NotificationService\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payment-service</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched PaymentService\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">publisher</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched PaymentEventPublisher</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">topic</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched payments\.completed</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">used-repograph</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">matched mcp__plugin_repograph_repograph__</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">14 turns · $0.20 · 22:33:12 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">notification-service</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched NotificationService\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payment-service</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched PaymentService\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">publisher</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched PaymentEventPublisher</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">topic</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched payments\.completed</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">used-repograph</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">matched mcp__plugin_repograph_repograph__</p>
+
+</div>
+</details></div>
+</div>
+</section><section class="arm">
+<div class="arm-head">
+<span class="arm-label">Baseline (no plugin)</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">100% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">11 turns · $0.20 · 22:33:14 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">notification-service</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched NotificationService\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payment-service</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched PaymentService\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">publisher</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched PaymentEventPublisher</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">topic</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched payments\.completed</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">13 turns · $0.24 · 22:33:15 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">notification-service</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched NotificationService\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payment-service</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched PaymentService\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">publisher</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched PaymentEventPublisher</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">topic</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched payments\.completed</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">12 turns · $0.26 · 22:33:16 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">notification-service</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched NotificationService\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payment-service</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched PaymentService\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">publisher</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched PaymentEventPublisher</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">topic</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched payments\.completed</p>
+
+</div>
+</details></div>
+</div>
+</section>
+</details>
+<details class="section" open>
+<summary>Prompt</summary>
+<div class="md"><p>We plan to remove <code>PaymentCompletedEvent.channel</code>. Who produces and who consumes this event, and what breaks? List every affected production source file (file name and repository), what has to change in it, and say which HTTP endpoints or Kafka topics carry the change. Ignore test code.</p>
+</div>
+</details>
+<details class="section" open>
+<summary>Graders — what "good" means for this case</summary>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">notification-service</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;NotificationService\\.java&quot;</code></div><div class="kv"><span>flags</span><code>&quot;i&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">payment-service</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;PaymentService\\.java&quot;</code></div><div class="kv"><span>flags</span><code>&quot;i&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">publisher</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;PaymentEventPublisher&quot;</code></div><div class="kv"><span>flags</span><code>&quot;i&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">topic</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;payments\\.completed&quot;</code></div><div class="kv"><span>flags</span><code>&quot;i&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">used-repograph</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;trace&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;mcp__plugin_repograph_repograph__&quot;</code></div><div class="kv"><span>flags</span><code>&quot;&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div><div class="kv"><span>arm</span><code>&quot;with-only&quot;</code></div></div>
+</div>
+</details>
+</article>
+<article class="case" id="case-3">
+<div class="case-head">
+<h2>fraud-riskscore</h2>
+<span class="muted mono">evals/fraud-riskscore</span>
+<span class="spacer"></span>
+
+<span class="delta delta-zero">· 0.0 pts</span>
+<span class="muted">with plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span><i class="tick" style="left:0.0%"></i></span>
+<span class="num case-score">100%</span>
+</div>
+
+<details class="section" open>
+<summary>Results</summary>
+<section class="arm">
+<div class="arm-head">
+<span class="arm-label">With plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">100% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">13 turns · $0.18 · 22:33:43 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">endpoint</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /fraud/checks</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">fraud-controller</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched FraudController\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">fraud-rules</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched FraudRules\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payments-fraud-client</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched FraudClient</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">silent-break</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: FAIL PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✗ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">Only two production files have to change: the record itself in `bank-contracts` and one log statement in `fraud-service`. One HTTP endpoint carries the field, and no Kafka topic does.
+
+## Production files that must change
+
+| Repository | File | What has to change |
+|---|---|---|
+| **bank-contracts** | `src/main/java/dev/demobank/contracts/FraudCheckResult.java:3` | Rename the record component: `record FraudCheckResult(boolean approved, int riskPoints, String reason)`. The accessor becomes `riskPoints()`. |
+| **fraud-service** | `src/main/java/dev/demobank/fraud/FraudController.java:28` | Change `result.riskScore()` to `result.riskPoints()` in the log call. Without this it won&apos;t compile. You may also want to change the `score=` log label on line 27, though that&apos;s optional. |
+
+## Production files that use the type but need no code change
+
+- **fraud-service** `src/main/java/dev/demobank/fraud/FraudRules.java:25,28,31,33`: the four `new FraudCheckResult(...)` calls pass arguments by position, so they still compile.
+- **payments-service** `src/main/java/dev/demobank/payments/client/FraudClient.java:13`: only uses the type as the return value of the HTTP client.
+- **payments-service** `src/main/java/dev/demobank/payments/PaymentService.java:49–53`: reads only `approved()` and `reason()`, never the risk score. It doesn&apos;t copy the score into `PaymentDto` or `PaymentCompletedEvent` either.
+
+None of the other repositories (accounts, gateway, notifications) reference the field. I also searched the whole workspace for &quot;risk&quot; in any case, including config files, and found no other uses.
+
+## Wire impact
+
+**HTTP:** `POST /fraud/checks` (`FraudController#check`, fraud-service) returns `FraudCheckResult`, so the JSON field changes from `&quot;riskScore&quot;` to `&quot;riskPoints&quot;`.
+- Its only caller in the workspace is payments-service, through `FraudClient`.
+- Because payments-service never reads the field, a version mismatch during rollout won&apos;t break it, as long as Jackson ignores unknown properties. Spring Boot&apos;s default does.
+- If anything outside this workspace calls `/fraud/checks` (dashboards, other teams), it will silently stop getting the score. Static analysis can&apos;t see such callers.
+
+**Kafka:** none. The only topic, `payments.completed`, carries `PaymentCompletedEvent`, which doesn&apos;t contain the risk score.
+
+**Gateway public API:** not affected. No `/api/v1/...` response exposes `FraudCheckResult`.
+
+## Rollout order
+1. Release `bank-contracts` with the renamed field.
+2. Update fraud-service (the log call) and deploy it. The field name on the wire changes at this point.
+3. Bump payments-service to the new contracts version. It doesn&apos;t strictly have to happen at the same time, since it never reads the field.
+
+If you need the old JSON name kept for unknown outside callers, put `@JsonProperty(&quot;riskScore&quot;)` on the renamed component, or temporarily emit both names.
+
+Test code is excluded as you asked. For when you get to it: `FraudRulesTest.java:19,27` (fraud-service) calls `riskScore()` and won&apos;t compile after the rename. `PaymentServiceTest` (payments-service) passes arguments by position and is unaffected.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">used-repograph</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">matched mcp__plugin_repograph_repograph__</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">9 turns · $0.16 · 22:33:43 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">endpoint</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /fraud/checks</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">fraud-controller</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched FraudController\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">fraud-rules</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched FraudRules\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payments-fraud-client</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched FraudClient</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">silent-break</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">Only one compile break in production code, but the JSON field name changes too. Only fraud-service and payments-service talk to each other with this type, and they would have to be released together.
+
+## Production files affected
+
+**bank-contracts**
+- `bank-contracts/src/main/java/dev/demobank/contracts/FraudCheckResult.java:3`: rename the record component in `record FraudCheckResult(boolean approved, int riskScore, String reason)`. This also renames the accessor `riskScore()` → `riskPoints()` and the JSON property `&quot;riskScore&quot;` → `&quot;riskPoints&quot;`.
+
+**fraud-service**
+- `fraud-service/src/main/java/dev/demobank/fraud/FraudController.java:28`: **compile break.** The log line calls `result.riskScore()`; change it to `result.riskPoints()`. You may also want to change the `score=` label on line 27.
+- `fraud-service/src/main/java/dev/demobank/fraud/FraudRules.java:25,28,31,33`: no edit needed. It builds the record by position (`new FraudCheckResult(false, 100, ...)`), so it still compiles. It is listed only because it produces the value.
+
+**payments-service**
+- `payments-service/src/main/java/dev/demobank/payments/client/FraudClient.java:14`: no code change needed. The `@HttpExchange` client turns the response JSON back into `FraudCheckResult`, so it is affected on the wire (see the rollout risk below).
+- `payments-service/src/main/java/dev/demobank/payments/PaymentService.java:49-53`: no change needed. It reads only `approved()` and `reason()`, never the score.
+
+accounts-service, gateway-service and notifications-service don&apos;t use `FraudCheckResult` at all.
+
+## HTTP endpoints and Kafka topics
+- **`POST /fraud/checks`** (fraud-service `FraudController#check`) is the only endpoint carrying the type. Its response body key changes from `riskScore` to `riskPoints`. The only caller in the workspace is payments-service, through `FraudClient`.
+- **No Kafka topics are affected.** The only topic, `payments.completed`, carries `PaymentCompletedEvent`, which doesn&apos;t include the fraud result.
+- **Not exposed through the public API.** The gateway&apos;s `/api/v1/...` endpoints return `PaymentDto`, and the score isn&apos;t copied into it.
+
+## Rollout risk
+If the two services run different versions of the contract, the JSON key won&apos;t match. Jackson then drops the unknown key and leaves the `int` at its default, so payments-service reads `0`. Nothing fails today, because payments-service never reads the score. It would become a silent bug if something starts using it later. To make the rollout safe, either:
+- deploy fraud-service and payments-service together, or
+- keep the old name as an alias during the transition: `@JsonAlias(&quot;riskScore&quot;)` on the new component, or emit both keys.
+
+## Caveats
+- This is based on the repograph static graph and a grep over `src/main` for `riskScore`/`risk_score`/`FraudCheckResult`. They agree.
+- Neither can see callers of `/fraud/checks` outside these repositories, such as dashboards or other teams&apos; services.
+- Tests that will also need updating, excluded as requested: `FraudRulesTest` and `PaymentServiceTest`.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">used-repograph</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">matched mcp__plugin_repograph_repograph__</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">12 turns · $0.19 · 22:33:47 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">endpoint</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /fraud/checks</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">fraud-controller</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched FraudController\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">fraud-rules</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched FraudRules\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payments-fraud-client</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched FraudClient</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">silent-break</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">Renaming `riskScore` breaks little. Only two production files outside the contract itself are affected, and no Kafka topic carries the type. I got this from the repograph impact analysis and checked it with a workspace-wide grep for `riskScore` and `risk` (excluding `src/test`). I read each file listed below.
+
+## Files that must change
+
+| Repository | File | Change | Kind of break |
+|---|---|---|---|
+| **bank-contracts** | `src/main/java/dev/demobank/contracts/FraudCheckResult.java:3` | Rename the record component: `record FraudCheckResult(boolean approved, int riskPoints, String reason)` | Source of the change. It also changes the accessor and the JSON property name. |
+| **fraud-service** | `src/main/java/dev/demobank/fraud/FraudController.java:28` | Change `result.riskScore()` to `result.riskPoints()` in the log statement. The log label `score=` could also become `points=`, but that&apos;s optional. | Compile break |
+| **fraud-service** | `src/main/java/dev/demobank/fraud/FraudRules.java:25,28,31,33` | No code edit needed, because it builds the record by position (`new FraudCheckResult(false, 100, ...)`). It just has to be rebuilt against the new contract version. | None, rebuild only |
+| **payments-service** | `src/main/java/dev/demobank/payments/client/FraudClient.java:13-14` | No code edit. It uses `FraudCheckResult` as the response type of the HTTP client, so the new name affects how the JSON is deserialised. | Silent wire break (see below) |
+| **payments-service** | `src/main/java/dev/demobank/payments/PaymentService.java:49-53` | No edit. It only reads `approved()` and `reason()`, never the risk score. | None |
+
+No other production code reads the field: gateway-service, accounts-service and notifications-service don&apos;t use `FraudCheckResult`. The configuration files, `docker-compose.yml`, `smoke-test.sh` and the README don&apos;t mention `riskScore` either.
+
+## HTTP endpoints
+- **`POST /fraud/checks`** (fraud-service, `FraudController#check`). The JSON response property changes from `&quot;riskScore&quot;` to `&quot;riskPoints&quot;`. The only caller in the workspace is payments-service, through `FraudClient`. Because payments-service never reads the value, an old and a new payments-service would both keep working; a version that doesn&apos;t know the field just gets `0` or ignores it.
+- The gateway doesn&apos;t route to `/fraud/**`, so the endpoint isn&apos;t exposed externally through the gateway. The analysis can&apos;t see callers outside this workspace, though. If anything else (dashboards, scripts, other teams) calls fraud-service directly and reads `riskScore`, it will silently lose the value.
+
+## Kafka topics
+- None. `FraudCheckResult` isn&apos;t part of any event payload.
+
+## Test code (excluded, for awareness)
+Tests that read the field by name will fail to compile:
+- fraud-service: `FraudRulesTest.java:19,27`
+
+Tests that only construct the record by position need no edit:
+- payments-service: `PaymentServiceTest.java:53,69,82,94`
+
+## Rollout order
+1. Release the new `bank-contracts` version.
+2. Update and release fraud-service.
+3. Bump payments-service to the new contract whenever convenient. It doesn&apos;t use the field, so the order doesn&apos;t matter for it.
+
+To avoid breaking callers outside the workspace, you could temporarily keep the old JSON name with `@JsonProperty(&quot;riskScore&quot;)` on the renamed component, or send both properties.</pre>
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">used-repograph</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">matched mcp__plugin_repograph_repograph__</p>
+
+</div>
+</details></div>
+</div>
+</section><section class="arm">
+<div class="arm-head">
+<span class="arm-label">Baseline (no plugin)</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">100% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">6 turns · $0.13 · 22:33:50 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">endpoint</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /fraud/checks</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">fraud-controller</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched FraudController\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">fraud-rules</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched FraudRules\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payments-fraud-client</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched FraudClient</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">silent-break</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">Only one production file actually breaks at compile time. The field never leaves the synchronous fraud-service → payments-service HTTP call, and no Kafka topic carries it.
+
+### Files that need changes
+
+| Repository | File | Change |
+|---|---|---|
+| **bank-contracts** | `src/main/java/dev/demobank/contracts/FraudCheckResult.java:3` | Rename the record component: `record FraudCheckResult(boolean approved, int riskPoints, String reason)`. This also renames the accessor to `riskPoints()` and the JSON property to `&quot;riskPoints&quot;`. |
+| **fraud-service** | `src/main/java/dev/demobank/fraud/FraudController.java:28` | Change `result.riskScore()` to `result.riskPoints()` in the log statement. You may also want to change the log label `score=` to match, but nothing requires it. This is the only compile error in production code. |
+
+### Files that use `FraudCheckResult` but need no edits
+- **fraud-service** `FraudRules.java:25-33` builds the result with the positional constructor (`new FraudCheckResult(false, 100, ...)`), so the rename doesn&apos;t affect it. It just needs to be rebuilt against the new contracts version.
+- **payments-service** `client/FraudClient.java:14` deserializes the response. This is where the change matters at runtime (see below).
+- **payments-service** `PaymentService.java:49-55` reads only `approved()` and `reason()`, never the score.
+
+### HTTP endpoints and Kafka topics
+- **HTTP: `POST /fraud/checks`** (served by `FraudController`, called by `FraudClient` in payments-service). The JSON response field changes from `riskScore` to `riskPoints`. This is the only place the change travels between services.
+  - **Deployment risk:** if fraud-service and payments-service run different versions of bank-contracts, Jackson will drop the unknown property and leave the score at `0` instead of failing. Today nothing breaks, because payments-service never reads the score. Any external client of `/fraud/checks` that reads `riskScore` would silently get nothing.
+- **Kafka: none.** `PaymentCompletedEvent` doesn&apos;t include the fraud result, so no topic changes.
+- **gateway-service, accounts-service and notifications-service** don&apos;t reference `FraudCheckResult`, `riskScore` or the fraud endpoint, so they aren&apos;t affected. I also searched config, scripts and docs (YAML, `docker-compose.yml`, `smoke-test.sh`, README) for `riskScore`/`risk_score` and found no matches.
+
+You said to ignore tests, but note that `FraudRulesTest.java:19,27` in fraud-service calls `riskScore()`, so the fraud-service test build will fail until it&apos;s updated. The `PaymentServiceTest` constructor calls are positional and will still compile.</pre>
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">8 turns · $0.15 · 22:34:08 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">endpoint</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /fraud/checks</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">fraud-controller</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched FraudController\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">fraud-rules</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched FraudRules\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payments-fraud-client</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched FraudClient</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">silent-break</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">The rename touches only 2 production files, both in two repositories. I searched every repository for `riskScore` (any casing) and `FraudCheckResult`, and they don&apos;t appear in gateway-service, notifications-service, accounts-service, any config file, or the bank-platform scripts.
+
+## Files that must change
+
+| Repository | File | What changes |
+|---|---|---|
+| **bank-contracts** | `src/main/java/dev/demobank/contracts/FraudCheckResult.java:3` | Rename the record field: `record FraudCheckResult(boolean approved, int riskPoints, String reason)`. This also renames the accessor `riskScore()` to `riskPoints()` and the JSON property from `&quot;riskScore&quot;` to `&quot;riskPoints&quot;`. |
+| **fraud-service** | `src/main/java/dev/demobank/fraud/FraudController.java:28` | Change `result.riskScore()` to `result.riskPoints()` in the log statement. You may also want to change the log label `score=` to `points=`. This is the only line that won&apos;t compile without the change. |
+
+## Files that use the type but don&apos;t need edits
+
+- **fraud-service** `FraudRules.java:25-33` builds the result with the positional constructor (`new FraudCheckResult(false, 100, ...)`), so the rename doesn&apos;t affect it.
+- **payments-service** `client/FraudClient.java:14` only declares `FraudCheckResult` as the return type.
+- **payments-service** `PaymentService.java:49-53` reads only `fraud.approved()` and `fraud.reason()`. It never reads the risk score, so it still compiles and behaves the same.
+
+To pick up the change, both fraud-service and payments-service need to move to the new bank-contracts version.
+
+## Endpoints and topics affected
+
+- **HTTP: `POST /fraud/checks`** (fraud-service, port 8084). This is the only place the change travels between services. The response JSON field changes from `riskScore` to `riskPoints`. The one caller is payments-service, through `FraudClient` (`@HttpExchange(&quot;/fraud&quot;)` + `@PostExchange(&quot;/checks&quot;)`). The gateway doesn&apos;t route `/fraud`, so no external client sees this field.
+- **Kafka: none.** `FraudCheckResult` isn&apos;t part of `PaymentCompletedEvent` or any other published event, and the risk score is never copied into one.
+
+## Deployment risk
+
+The risk is low, but there&apos;s one thing to watch. If fraud-service and payments-service are deployed separately, for a while one will be on the old contract and the other on the new one. Jackson will then either skip the unknown property or leave the field at `0`. I haven&apos;t checked whether these services change Spring Boot&apos;s default, which ignores unknown properties. Since payments-service never reads the value, the mismatch has no functional effect. You could still add `@JsonAlias(&quot;riskScore&quot;)` to the new field during the transition if you&apos;d rather be safe.
+
+Tests aren&apos;t in the table, as you asked, but they&apos;ll also need the rename: `FraudRulesTest` calls `result.riskScore()` at lines 19 and 27.</pre>
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">8 turns · $0.19 · 22:34:14 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">endpoint</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /fraud/checks</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">fraud-controller</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched FraudController\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">fraud-rules</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched FraudRules\.java</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payments-fraud-client</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched FraudClient</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">silent-break</span>  </summary>
+<div class="grader-body">
+<p class="explanation">judge votes: PASS PASS PASS</p>
+<div class="kv"><span>Judge votes</span><span class="votes">✓ ✓ ✓</span></div><div class="kv"><span>Evidence (what the judge was shown; for an image, a description of what was sent)</span></div><pre class="evidence">Only two production files need editing. A third file is affected only at runtime, through the JSON wire format.
+
+## Production files
+
+| # | Repository | File | What has to change |
+|---|---|---|---|
+| 1 | **bank-contracts** | `src/main/java/dev/demobank/contracts/FraudCheckResult.java:3` | Rename the record component: `record FraudCheckResult(boolean approved, int riskPoints, String reason)`. This renames the accessor to `riskPoints()` and the JSON property to `&quot;riskPoints&quot;`. |
+| 2 | **fraud-service** | `src/main/java/dev/demobank/fraud/FraudController.java:28` | `result.riskScore()` → `result.riskPoints()` in the log statement. This is the only call to the accessor in production code. You may also want to change the log label `score=` (line 27), but that&apos;s optional. |
+| 3 | **payments-service** | `client/FraudClient.java`, `PaymentService.java` | **No source edit.** `PaymentService` reads only `fraud.approved()` and `fraud.reason()`, never the score, so it compiles unchanged. It still has to be rebuilt against the new contracts jar (see below). |
+
+`fraud-service/.../FraudRules.java` (lines 25–33) builds results with positional arguments (`new FraudCheckResult(false, 100, ...)`), so it still compiles. It only needs a rebuild.
+
+**accounts-service, gateway-service and notifications-service** depend on `bank-contracts` but never use `FraudCheckResult`, so nothing changes there.
+
+## Endpoints and topics carrying the change
+
+- **HTTP: `POST /fraud/checks`**, from payments-service (`FraudClient`) to fraud-service (`FraudController`). The response body changes from `&quot;riskScore&quot;` to `&quot;riskPoints&quot;`. There&apos;s no custom Jackson naming strategy or `@JsonProperty` anywhere, so the record component name is exactly the field name on the wire.
+- **The gateway doesn&apos;t expose this endpoint.** gateway-service has no fraud route, so external clients never see the field.
+- **Kafka: none.** The score isn&apos;t copied into `PaymentCompletedEvent` or `PaymentDto`, so no topic payload changes.
+
+## Rollout risk
+
+All services use `bank-contracts 0.1.0-SNAPSHOT`, and CI checks out `bank-contracts` at a matching branch or at `main`. If fraud-service and payments-service are deployed at different times, one side sends or expects `riskScore` while the other uses `riskPoints`:
+- Spring Boot&apos;s default Jackson setup ignores unknown properties, so the call won&apos;t fail.
+- payments-service would just get the default `0` for the score field. Nothing reads that today, so it&apos;s harmless now. It would become a silent bug if code starts using the score.
+- If you want a safe transition, temporarily add `@JsonAlias(&quot;riskScore&quot;)` to the renamed component.
+
+## Outside the scope you asked about
+
+Tests you said to ignore: `FraudRulesTest` calls `riskScore()` on lines 19 and 27 and will fail to compile. `PaymentServiceTest` uses the positional constructor and is unaffected. No docs, scripts or YAML mention the field: `smoke-test.sh` and the README refer to fraud only in general terms.</pre>
+</div>
+</details></div>
+</div>
+</section>
+</details>
+<details class="section" open>
+<summary>Prompt</summary>
+<div class="md"><p>We want to rename <code>FraudCheckResult.riskScore</code> to <code>riskPoints</code>. What breaks, across all repositories? List every affected production source file (file name and repository), what has to change in it, and say which HTTP endpoints or Kafka topics carry the change. Ignore test code.</p>
+</div>
+</details>
+<details class="section" open>
+<summary>Graders — what "good" means for this case</summary>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">endpoint</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;/fraud/checks&quot;</code></div><div class="kv"><span>flags</span><code>&quot;i&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">fraud-controller</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;FraudController\\.java&quot;</code></div><div class="kv"><span>flags</span><code>&quot;i&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">fraud-rules</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;FraudRules\\.java&quot;</code></div><div class="kv"><span>flags</span><code>&quot;i&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">payments-fraud-client</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;FraudClient&quot;</code></div><div class="kv"><span>flags</span><code>&quot;i&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">silent-break</span><span class="badge">llm</span></div>
+<div class="md"><p>The answer points out that renaming the record component also renames the JSON property sent over
+<code>POST /fraud/checks</code>, so payments-service (which receives <code>FraudCheckResult</code> through its HTTP client) will silently
+get a missing or default value unless both sides are deployed together or the old name is kept (e.g. <code>@JsonProperty</code>
+or <code>@JsonAlias</code>). Answers that only list compile errors fail.</p>
+</div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">used-repograph</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;trace&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;mcp__plugin_repograph_repograph__&quot;</code></div><div class="kv"><span>flags</span><code>&quot;&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div><div class="kv"><span>arm</span><code>&quot;with-only&quot;</code></div></div>
+</div>
+</details>
+</article>
+<article class="case" id="case-4">
+<div class="case-head">
+<h2>payment-flow</h2>
+<span class="muted mono">evals/payment-flow</span>
+<span class="spacer"></span>
+
+<span class="delta delta-zero">· 0.0 pts</span>
+<span class="muted">with plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span><i class="tick" style="left:0.0%"></i></span>
+<span class="num case-score">100%</span>
+</div>
+
+<details class="section" open>
+<summary>Results</summary>
+<section class="arm">
+<div class="arm-head">
+<span class="arm-label">With plugin</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">100% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">15 turns · $0.21 · 22:34:17 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">credit</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /credit</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">debit</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /debit</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">fraud</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /fraud/checks</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">notifications</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched NotificationService|PaymentEventListener</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payments-endpoint</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched POST\s*/payments|/payments\b</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">topic</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched payments\.completed</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">used-repograph</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">matched mcp__plugin_repograph_repograph__</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">11 turns · $0.17 · 22:34:22 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">credit</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /credit</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">debit</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /debit</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">fraud</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /fraud/checks</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">notifications</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched NotificationService|PaymentEventListener</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payments-endpoint</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched POST\s*/payments|/payments\b</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">topic</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched payments\.completed</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">used-repograph</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">matched mcp__plugin_repograph_repograph__</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-accent" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">11 turns · $0.18 · 22:34:35 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">credit</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /credit</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">debit</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /debit</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">fraud</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /fraud/checks</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">notifications</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched NotificationService|PaymentEventListener</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payments-endpoint</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched POST\s*/payments|/payments\b</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">topic</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched payments\.completed</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">used-repograph</span>  <span class="badge">plugin-fired indicator</span></summary>
+<div class="grader-body">
+<p class="explanation">matched mcp__plugin_repograph_repograph__</p>
+
+</div>
+</details></div>
+</div>
+</section><section class="arm">
+<div class="arm-head">
+<span class="arm-label">Baseline (no plugin)</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">100% of runs perfect</span>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 1</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">17 turns · $0.31 · 22:34:47 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">credit</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /credit</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">debit</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /debit</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">fraud</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /fraud/checks</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">notifications</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched NotificationService|PaymentEventListener</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payments-endpoint</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched POST\s*/payments|/payments\b</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">topic</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched payments\.completed</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 2</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">20 turns · $0.26 · 22:34:47 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">credit</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /credit</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">debit</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /debit</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">fraud</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /fraud/checks</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">notifications</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched NotificationService|PaymentEventListener</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payments-endpoint</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched POST\s*/payments|/payments\b</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">topic</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched payments\.completed</p>
+
+</div>
+</details></div>
+</div>
+<div class="run">
+<div class="run-head">
+<span class="run-title">Run 3</span>
+<span class="meter m-base" aria-hidden="true"><span style="width:100.0%"></span></span>
+<span class="num">100%</span>
+<span class="muted num">17 turns · $0.26 · 22:34:49 UTC</span>
+</div>
+
+<div class="graders"><details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">credit</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /credit</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">debit</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /debit</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">fraud</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched /fraud/checks</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">notifications</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched NotificationService|PaymentEventListener</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">payments-endpoint</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched POST\s*/payments|/payments\b</p>
+
+</div>
+</details>
+<details class="grader">
+<summary><span class="chip chip-pass">✓ pass</span> <span class="grader-name">topic</span>  </summary>
+<div class="grader-body">
+<p class="explanation">matched payments\.completed</p>
+
+</div>
+</details></div>
+</div>
+</section>
+</details>
+<details class="section" open>
+<summary>Prompt</summary>
+<div class="md"><p>Trace what happens, service by service and in order, when a client calls <code>POST /api/v1/payments</code> on the gateway. For every hop name the calling class, the target service and endpoint or topic, and the handling class.</p>
+</div>
+</details>
+<details class="section" open>
+<summary>Graders — what "good" means for this case</summary>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">credit</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;/credit&quot;</code></div><div class="kv"><span>flags</span><code>&quot;i&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">debit</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;/debit&quot;</code></div><div class="kv"><span>flags</span><code>&quot;i&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">fraud</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;/fraud/checks&quot;</code></div><div class="kv"><span>flags</span><code>&quot;i&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">notifications</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;NotificationService|PaymentEventListener&quot;</code></div><div class="kv"><span>flags</span><code>&quot;i&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">payments-endpoint</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;POST\\s*/payments|/payments\\b&quot;</code></div><div class="kv"><span>flags</span><code>&quot;i&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">topic</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;last_message&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;payments\\.completed&quot;</code></div><div class="kv"><span>flags</span><code>&quot;i&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div></div>
+</div>
+<div class="grader-def">
+<div class="grader-def-head"><span class="grader-name">used-repograph</span><span class="badge">regex</span></div>
+<div class="config"><div class="kv"><span>target</span><code>&quot;trace&quot;</code></div><div class="kv"><span>pattern</span><code>&quot;mcp__plugin_repograph_repograph__&quot;</code></div><div class="kv"><span>flags</span><code>&quot;&quot;</code></div><div class="kv"><span>match</span><code>&quot;contains&quot;</code></div><div class="kv"><span>arm</span><code>&quot;with-only&quot;</code></div></div>
+</div>
+</details>
+</article>
+<footer>Generated by <code>claude plugin eval</code> · schema v1 · scores are not comparable across different suites</footer>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  var bar=document.querySelector('.toolbar');
+  if(!bar)return;
+  bar.addEventListener('click',function(e){
+    var b=e.target&&e.target.closest('button');
+    if(!b)return;
+    var open=b.dataset.act==='expand';
+    document.querySelectorAll('details.section, details.grader').forEach(function(d){d.open=open});
+  });
+});
+// Collapsed details vanish from print/PDF; these pages are share artifacts.
+window.addEventListener('beforeprint',function(){
+  document.querySelectorAll('details').forEach(function(d){
+    if(!d.open){d.dataset.printOpened='1';d.open=true}
+  });
+});
+window.addEventListener('afterprint',function(){
+  document.querySelectorAll('details[data-print-opened]').forEach(function(d){
+    d.open=false;delete d.dataset.printOpened;
+  });
+});
+</script>
+</body>
+</html>

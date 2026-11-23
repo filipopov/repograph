@@ -1,0 +1,1915 @@
+{
+ "schemaVersion": 1,
+ "claudeVersion": "2.1.331",
+ "startedAt": "2026-11-23T22:31:51.770Z",
+ "durationSeconds": 210,
+ "costUsd": 5.414418899999999,
+ "partial": false,
+ "suite": {
+  "root": ".",
+  "ablation": "with-without",
+  "threshold": 0,
+  "concurrency": 4,
+  "plugins": [
+   {
+    "name": "repograph",
+    "version": "0.4.0",
+    "path": "."
+   }
+  ]
+ },
+ "cases": [
+  {
+   "name": "account-currency",
+   "dir": "evals/account-currency",
+   "source": "mixed",
+   "promptMarkdown": "accounts-service wants to change `AccountDto.currency` from a String to a `Currency` enum serialised as an object. Which code and which consumers are affected? List every affected production source file (file name and repository), what has to change in it, and say which HTTP endpoints or Kafka topics carry the change. Ignore test code. Point out anything that may have consumers outside this workspace.",
+   "runsPerCase": 3,
+   "timeoutSeconds": 600,
+   "maxTurns": 30,
+   "graders": [
+    {
+     "name": "accounts-controller",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "last_message",
+      "pattern": "AccountController\\.java",
+      "flags": "i",
+      "match": "contains"
+     }
+    },
+    {
+     "name": "gateway-client",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "last_message",
+      "pattern": "gateway[\\s\\S]{0,400}?AccountsClient|AccountsClient[\\s\\S]{0,200}?gateway",
+      "flags": "i",
+      "match": "contains"
+     }
+    },
+    {
+     "name": "gateway-controller",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "last_message",
+      "pattern": "GatewayController\\.java",
+      "flags": "i",
+      "match": "contains"
+     }
+    },
+    {
+     "name": "payments-client",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "last_message",
+      "pattern": "payments[\\s\\S]{0,400}?AccountsClient|AccountsClient[\\s\\S]{0,200}?payments",
+      "flags": "i",
+      "match": "contains"
+     }
+    },
+    {
+     "name": "public-api",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "last_message",
+      "pattern": "/api/v1/accounts",
+      "flags": "i",
+      "match": "contains"
+     }
+    },
+    {
+     "name": "risk-reasoning",
+     "type": "llm",
+     "weight": 1,
+     "graderMarkdown": "The answer explains that changing `currency` from a JSON string to an object is a wire-format (JSON) break for\nHTTP consumers, not only a compile error, and it warns that the gateway's `/api/v1/accounts` endpoints are public\nand may have consumers outside the workspace (mobile apps, partners) that cannot be found in the code. It proposes\na compatible rollout (for example a new field or versioned endpoint, or deploying contracts and consumers first).",
+     "config": {
+      "criteria": "The answer explains that changing `currency` from a JSON string to an object is a wire-format (JSON) break for\nHTTP consumers, not only a compile error, and it warns that the gateway's `/api/v1/accounts` endpoints are public\nand may have consumers outside the workspace (mobile apps, partners) that cannot be found in the code. It proposes\na compatible rollout (for example a new field or versioned endpoint, or deploying contracts and consumers first).",
+      "focus": "last_message"
+     }
+    },
+    {
+     "name": "used-repograph",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "trace",
+      "pattern": "mcp__plugin_repograph_repograph__",
+      "flags": "",
+      "match": "contains",
+      "arm": "with-only"
+     }
+    }
+   ],
+   "arms": {
+    "with": [
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 15,
+      "costUsd": 0.24972619999999998,
+      "judgeCostUsd": 0.0016380000000000001,
+      "durationSeconds": 40,
+      "startedAt": "2026-11-23T22:35:50.271Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-kx9i3L/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "accounts-controller",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched AccountController\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "gateway-client",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched gateway[\\s\\S]{0,400}?AccountsClient|AccountsClient[\\s\\S]{0,200}?gateway",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "gateway-controller",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched GatewayController\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payments-client",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched payments[\\s\\S]{0,400}?AccountsClient|AccountsClient[\\s\\S]{0,200}?payments",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "public-api",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /api/v1/accounts",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "risk-reasoning",
+        "passed": true,
+        "weight": 1,
+        "explanation": "judge votes: PASS PASS PASS",
+        "withOnly": false,
+        "scored": true,
+        "judgeVotes": [
+         true,
+         true,
+         true
+        ],
+        "evidence": "## Impact of changing `AccountDto.currency` from `String` to a `Currency` enum serialised as an object\n\n**Summary:** Only one file outright stops compiling. The bigger risk is the JSON shape on the wire: `\"currency\": \"EUR\"` becomes `\"currency\": {...}`. That change goes out on four internal endpoints and two public gateway endpoints. No Kafka topic carries `AccountDto`.\n\n### Production source files affected\n\n**bank-contracts**\n- `src/main/java/dev/demobank/contracts/AccountDto.java:5`: change the record component from `String currency` to `Currency currency`. You also need to add the new `Currency` enum here, and set it to serialise as an object (for example `@JsonFormat(shape = OBJECT)` on the enum). This is the shared contract, so every other service is affected once it moves to the new contracts version.\n\n**accounts-service** (the producer)\n- `src/main/java/dev/demobank/accounts/AccountController.java:43-44`: `toDto` builds the DTO with `account.currency()`, which is a `String`. **This stops compiling.** You can convert it with `Currency.valueOf(...)` or similar. Or you can move the internal model to the enum as well:\n  - `Account.java:5`: the `String currency` field.\n  - `AccountService.java:51-53`: `checkCurrency` compares `account.currency()` with `MoneyMovementRequest.currency()`, which is a `String`. It also passes both values to `CurrencyMismatchException`.\n  \n  Neither of these has to change for this DTO change. Only change them if you also want the internal model to use the enum.\n- The controller methods at `AccountController.java:24, 29, 34, 39` (`list`, `get`, `debit`, `credit`) need no code change, but they now send the new JSON shape.\n\n**gateway-service** (a consumer that passes the data on)\n- `src/main/java/dev/demobank/gateway/client/AccountsClient.java:13-17`: `list()` and `get()` deserialise `AccountDto`. This code needs no change, but **it breaks without any compile error if the versions differ during rollout.** An old contracts jar can't read an object into a `String`, and a new jar can't read a plain string into an object-shaped enum unless you add a tolerant creator.\n- `src/main/java/dev/demobank/gateway/GatewayController.java:38-46`: passes `AccountDto` straight through to public clients. No code change, but the public response shape changes.\n\n**payments-service** (a consumer)\n- `src/main/java/dev/demobank/payments/client/AccountsClient.java:15-22`: `get`, `debit` and `credit` all declare `AccountDto` as their return type. `PaymentService.java:60, 69, 73` ignores the value that `debit` and `credit` return, and `get` is never called. So nothing reads `currency`, but Jackson still deserialises the response body. If the versions differ, a successful debit or credit could throw a deserialisation error *after the money has moved on the accounts-service side*. `PaymentService` only catches `RestClientResponseException`, so that error would go uncaught and the payment would be left half-done. This is the riskiest silent break.\n\n**fraud-service, notifications-service:** not affected. Their `currency` fields belong to other DTOs and events: `FraudCheckRequest`, `PaymentCompletedEvent`, `PaymentRequest`, `PaymentDto` and `MoneyMovementRequest`. All of these stay `String`.\n\n### HTTP endpoints carrying the change\n| Service | Endpoint | Called by |\n|---|---|---|\n| accounts-service | `GET /accounts` | gateway-service |\n| accounts-service | `GET /accounts/{id}` | gateway-service; payments-service also declares a client for it but never calls it |\n| accounts-service | `POST /accounts/{id}/debit` | payments-service |\n| accounts-service | `POST /accounts/{id}/credit` | payments-service |\n| gateway-service | `GET /api/v1/accounts` | **nobody in the workspace: public API** |\n| gateway-service | `GET /api/v1/accounts/{id}` | **nobody in the workspace: public API** |\n\n### Kafka topics\nNone. The only topic, `payments.completed`, carries `PaymentCompletedEvent`, whose `currency` is a separate `String` field.\n\n### Consumers outside this workspace\n- **`/api/v1/accounts` and `/api/v1/accounts/{id}`** on gateway-service: `GatewayController` is commented as the \"Public API\". External clients such as web and mobile apps will see `currency` change from a string to an object. That is a breaking API change, so it may need a `/api/v2` or a gateway-side mapping that keeps the string shape.\n- **The accounts-service `/accounts/**` endpoints** may also have callers the static graph can't see, such as scripts or other teams' services.\n- **bank-contracts** is a shared library. Any project outside the workspace that depends on it will stop compiling if it uses `AccountDto.currency()` as a `String`.\n\n### Suggested rollout\n1. In bank-contracts, add the enum with a tolerant `@JsonCreator` that accepts both the plain string and the object form, and release it.\n2. Upgrade payments-service and gateway-service to that version so they can read both shapes. In gateway-service, decide whether the public response keeps the string shape.\n3. Only then switch accounts-service to emit the object shape.\n\nNo tests were run and no files were changed. I checked the graph's results with grep and by reading the source."
+       },
+       {
+        "name": "used-repograph",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched mcp__plugin_repograph_repograph__",
+        "withOnly": true,
+        "scored": false
+       }
+      ]
+     },
+     {
+      "score": 0.8333333333333334,
+      "passed": false,
+      "turns": 12,
+      "costUsd": 0.2456157,
+      "judgeCostUsd": 0.0010579,
+      "durationSeconds": 39,
+      "startedAt": "2026-11-23T22:35:50.271Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-EMJkqx/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "accounts-controller",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched AccountController\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "gateway-client",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched gateway[\\s\\S]{0,400}?AccountsClient|AccountsClient[\\s\\S]{0,200}?gateway",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "gateway-controller",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched GatewayController\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payments-client",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched payments[\\s\\S]{0,400}?AccountsClient|AccountsClient[\\s\\S]{0,200}?payments",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "public-api",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /api/v1/accounts",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "risk-reasoning",
+        "passed": false,
+        "weight": 1,
+        "explanation": "judge votes: FAIL FAIL FAIL",
+        "withOnly": false,
+        "scored": true,
+        "judgeVotes": [
+         false,
+         false,
+         false
+        ],
+        "evidence": "I traced this with the repograph cross-repo graph and checked it against a grep of every non-test source file. No Kafka topic carries `AccountDto`; it only travels over HTTP. Most of the risk is on the wire, not at compile time.\n\n## Affected production files\n\n| # | Repo | File | What has to change |\n|---|---|---|---|\n| 1 | **bank-contracts** | `src/main/java/dev/demobank/contracts/AccountDto.java:5` | Change `String currency` to `Currency currency`. Add a new `Currency` type to bank-contracts, so other repos can use it, with Jackson annotations for the object shape (e.g. `@JsonFormat(shape = OBJECT)`, or a `@JsonCreator` that also accepts the old string during migration). |\n| 2 | **accounts-service** | `src/main/java/dev/demobank/accounts/AccountController.java:43-44` (`toDto`) | **Compile break.** `account.currency()` is a `String`, so it has to be converted to `Currency` here, or the domain model changes too (next row). This mapper is the only place that builds the DTO, and it serves all 4 endpoints in this controller (lines 23\u201341). |\n| 3 | accounts-service | `src/main/java/dev/demobank/accounts/Account.java:5` | Optional. The internal record also holds `String currency`. It can stay a String if you convert in `toDto`. If you switch it to `Currency`, files 4 and 5 change as well. |\n| 4 | accounts-service | `src/main/java/dev/demobank/accounts/AccountService.java:51-53` (`checkCurrency`) | Only affected if row 3 changes. It compares `account.currency()` with the String in `MoneyMovementRequest.currency` (a String in bank-contracts `MoneyMovementRequest.java:6`, which is not part of this change). |\n| 5 | accounts-service | `src/main/java/dev/demobank/accounts/CurrencyMismatchException.java:9` | Only affected if row 3 changes (its constructor takes String arguments). |\n| 6 | **gateway-service** | `src/main/java/dev/demobank/gateway/client/AccountsClient.java:13,16` (`list`, `get`) | No source edit needed, but it must be rebuilt against the new contracts. With the old contracts it cannot read the new object shape. |\n| 7 | gateway-service | `src/main/java/dev/demobank/gateway/GatewayController.java:38-46` (`accounts`, `account`) | No source edit needed. It passes `AccountDto` straight through, so the new object shape becomes visible on the public API. |\n| 8 | **payments-service** | `src/main/java/dev/demobank/payments/client/AccountsClient.java:15,18,21` (`get`, `debit`, `credit`) | Rebuild against the new contracts. `get` has no callers in production code. |\n| 9 | payments-service | `src/main/java/dev/demobank/payments/PaymentService.java:60,69,73` | No compile break, but there is a runtime hazard (see below). |\n\nNothing in the workspace reads `AccountDto.currency()` directly. Apart from `toDto`, every consumer breaks through JSON serialisation, not through the compiler.\n\nfraud-service and notifications-service are not affected. They use other contracts (`FraudCheckRequest`, `PaymentCompletedEvent`), whose `currency` fields stay Strings.\n\n## What carries the change\n\n**HTTP endpoints (all responses):**\n- accounts-service `GET /accounts`: called by gateway-service.\n- accounts-service `GET /accounts/{id}`: called by gateway-service; payments-service has a client method for it but never calls it.\n- accounts-service `POST /accounts/{id}/debit`: called by payments-service.\n- accounts-service `POST /accounts/{id}/credit`: called by payments-service.\n- gateway-service `GET /api/v1/accounts`: **no caller in the workspace, possible public API.**\n- gateway-service `GET /api/v1/accounts/{id}`: **no caller in the workspace, possible public API.**\n\n**Kafka topics:** none. The only topic, `payments.completed`, carries `PaymentCompletedEvent`, which does not include `AccountDto`.\n\n## Consumers outside this workspace\n\n- **gateway `/api/v1/accounts` and `/api/v1/accounts/{id}`.** `GatewayController.java:22` describes itself as \"Public API\". Changing `\"currency\":\"CHF\"` to an object here breaks any external client. You may need API versioning (for example `/api/v2`), or the gateway could keep mapping to the String form.\n- **accounts-service `/accounts/**`.** Anything that calls it directly, such as ops scripts or other teams, would not show up in the graph.\n- **bank-contracts as a published library.** Any other project depending on `AccountDto` will hit a compile break when it upgrades.\n\n## Risk: payments can be left half-done during rollout\n\nIf accounts-service starts returning the object while payments-service still runs the old contracts (or the other way round), debit and credit still succeed on the server. The payments client then fails to read the response, because a String field can't be read from an object. That failure is an `HttpMessageNotReadableException` / `RestClientException`, not a `RestClientResponseException`. So the `catch` blocks at `PaymentService.java:61` and `:70` don't catch it:\n- After the debit, the money is gone from the source account, no credit happens, nothing is reversed, and the payment is not saved.\n- After the credit, the event is not published and the payment is not saved.\n\n## Suggested rollout order\n\n1. **bank-contracts:** add `Currency`, and make the `AccountDto.currency` reader accept both the String and the object form.\n2. Rebuild and deploy **payments-service** and **gateway-service** with the tolerant contracts. Decide what the gateway's public response should look like.\n3. Then switch **accounts-service** to sending the object.\n4. Remove the String fallback only once you're confident no external consumer still needs it.\n\nSeparately, payments-service never uses the debit/credit response body. Typing those client methods as `void` or `ResponseEntity<Void>` would remove the risk above entirely."
+       },
+       {
+        "name": "used-repograph",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched mcp__plugin_repograph_repograph__",
+        "withOnly": true,
+        "scored": false
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 15,
+      "costUsd": 0.2693143,
+      "judgeCostUsd": 0.0013237000000000001,
+      "durationSeconds": 42,
+      "startedAt": "2026-11-23T22:35:50.271Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-LeXEKW/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "accounts-controller",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched AccountController\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "gateway-client",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched gateway[\\s\\S]{0,400}?AccountsClient|AccountsClient[\\s\\S]{0,200}?gateway",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "gateway-controller",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched GatewayController\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payments-client",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched payments[\\s\\S]{0,400}?AccountsClient|AccountsClient[\\s\\S]{0,200}?payments",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "public-api",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /api/v1/accounts",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "risk-reasoning",
+        "passed": true,
+        "weight": 1,
+        "explanation": "judge votes: PASS PASS PASS",
+        "withOnly": false,
+        "scored": true,
+        "judgeVotes": [
+         true,
+         true,
+         true
+        ],
+        "evidence": "I didn't modify any files. One correction to the premise first: `AccountDto` isn't defined in accounts-service. It's in the shared module **bank-contracts** (`AccountDto.java:5`), so this is a change to the shared contract, not to accounts-service alone. No Kafka topic carries the change; it travels over six HTTP endpoints, two of which are the public gateway API.\n\n## Production files affected\n\n### bank-contracts\n| File | What has to change |\n|---|---|\n| `src/main/java/dev/demobank/contracts/AccountDto.java:5` | `String currency` becomes `Currency currency`. |\n| new `Currency.java` (there's no currency enum yet) | Add the enum, plus Jackson setup so it serialises as an object (`@JsonFormat(shape = OBJECT)` with getters, or a custom serializer). It also needs an `@JsonCreator` that accepts **both** the object and the old plain string, so it can be read during the rollout. Pick a name that doesn't clash with `java.util.Currency`. |\n\n### accounts-service (producer)\n| File | What has to change |\n|---|---|\n| `src/main/java/dev/demobank/accounts/AccountController.java:43-44` | `toDto` passes `account.currency()`, a String, into the DTO. This stops compiling, so it needs a conversion (`Currency.valueOf(...)` or similar). The four endpoints `list`, `get`, `debit` and `credit` (lines 23\u201341) all return the new shape. |\n| `Account.java:5`, `AccountService.java:51-53`, `CurrencyMismatchException.java:9` | Optional. These keep the internal model's currency as a String, and `checkCurrency` compares it against `MoneyMovementRequest.currency` (also a String). They only change if you also switch the domain model to the enum. |\n\n### payments-service (consumer)\n| File | What has to change |\n|---|---|\n| `src/main/java/dev/demobank/payments/client/AccountsClient.java:15-22` | No source change; it only needs the new bank-contracts version. `get` is never called, but `debit` and `credit` turn their responses into `AccountDto`. |\n| `src/main/java/dev/demobank/payments/PaymentService.java:59-76` | **This is the dangerous one.** If payments-service still runs the old contract when accounts-service starts sending an object, reading the response fails. That failure isn't an HTTP error status, so the `catch (RestClientResponseException e)` blocks don't catch it, but the debit has **already been applied** on the accounts side. The payment then aborts with no `FAILED` record. If the credit call is the one that fails, no reversal runs, so the source account ends up debited without being credited back. Either deploy payments-service first, or have the client ignore the response body (e.g. return `void`). Also consider catching `RestClientException` more broadly. |\n\n### gateway-service (consumer, and a pass-through to the public API)\n| File | What has to change |\n|---|---|\n| `src/main/java/dev/demobank/gateway/client/AccountsClient.java:13-17` | Needs the new contract. An old gateway reading the new shape fails, so `/api/v1/accounts` would return a 500. |\n| `src/main/java/dev/demobank/gateway/GatewayController.java:38-46` | No code change, but `accounts()` and `account(id)` return `AccountDto` to outside callers unchanged, so the **public response format changes**. |\n\nfraud-service and notifications-service don't use `AccountDto` and aren't affected.\n\n## Endpoints and topics carrying the change\n- **accounts-service (internal):** `GET /accounts` (called by gateway), `GET /accounts/{id}` (gateway; payments declares it but never calls it), `POST /accounts/{id}/debit` and `POST /accounts/{id}/credit` (payments).\n- **gateway-service (public):** `GET /api/v1/accounts` and `GET /api/v1/accounts/{id}`.\n- **Kafka:** none. The only topic, `payments.completed`, carries `PaymentCompletedEvent`, which has its own `String currency`.\n\n## Possible consumers outside this workspace\n- **`GET /api/v1/accounts` and `GET /api/v1/accounts/{id}`:** nothing in the workspace calls them, and `GatewayController` is commented as \"Public API\". Clients outside this workspace almost certainly read `\"currency\": \"CHF\"` as a string. This is a breaking public API change. Consider keeping the string in `/api/v1` (map it in the gateway) and offering the object shape in a `/api/v2`.\n- **The internal `/accounts/**` endpoints:** they could also have callers outside these repositories, such as scripts or other teams. The code graph can't see those. `bank-platform/scripts/smoke-test.sh` only posts payments, so it doesn't read the account format.\n- **bank-contracts as a library:** any outside project that depends on it will stop compiling when it upgrades.\n\n## Rollout order\n1. Release bank-contracts with the enum and a reader that accepts both the string and the object.\n2. Deploy payments-service and gateway-service on that version (gateway's public output should stay a string for now, per above).\n3. Deploy accounts-service, which then starts sending the object.\n4. Change the public API only behind a version bump."
+       },
+       {
+        "name": "used-repograph",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched mcp__plugin_repograph_repograph__",
+        "withOnly": true,
+        "scored": false
+       }
+      ]
+     }
+    ],
+    "without": [
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 20,
+      "costUsd": 0.31010769999999993,
+      "judgeCostUsd": 0.0013717000000000002,
+      "durationSeconds": 44,
+      "startedAt": "2026-11-23T22:35:50.271Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-LI37I3/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "accounts-controller",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched AccountController\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "gateway-client",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched gateway[\\s\\S]{0,400}?AccountsClient|AccountsClient[\\s\\S]{0,200}?gateway",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "gateway-controller",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched GatewayController\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payments-client",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched payments[\\s\\S]{0,400}?AccountsClient|AccountsClient[\\s\\S]{0,200}?payments",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "public-api",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /api/v1/accounts",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "risk-reasoning",
+        "passed": true,
+        "weight": 1,
+        "explanation": "judge votes: PASS PASS PASS",
+        "withOnly": false,
+        "scored": true,
+        "judgeVotes": [
+         true,
+         true,
+         true
+        ],
+        "evidence": "The change is contained to HTTP. No Kafka topic carries `AccountDto`. It still breaks the public API, and it can corrupt balances in payments-service if the two services are deployed out of step.\n\n## Where `AccountDto` flows\n\n`AccountDto` is only used as an HTTP response body:\n\n| Endpoint | Producer | Consumers in this workspace |\n|---|---|---|\n| `GET /accounts`, `GET /accounts/{id}` | accounts-service | gateway-service (`AccountsClient`), payments-service (`get`, not called anywhere) |\n| `POST /accounts/{id}/debit`, `POST /accounts/{id}/credit` (the response) | accounts-service | payments-service (`AccountsClient`) |\n| **`GET /api/v1/accounts`, `GET /api/v1/accounts/{id}`** | gateway-service (passes the response through unchanged) | **External clients. This is the public API.** |\n\n**Kafka:** not affected. The only topic is `payments.completed`. It carries `PaymentCompletedEvent`, whose `currency` is a separate `String` field. fraud-service and notifications-service never touch `AccountDto`.\n\n## Production files affected\n\n**bank-contracts**\n1. **`AccountDto.java`**: change `String currency` to `Currency currency`.\n2. **New `Currency.java`**: the enum, annotated `@JsonFormat(shape = OBJECT)`. It also needs a `@JsonCreator` that builds the enum from the object form. Jackson can write an enum as an object but can't read one back by default, and gateway-service and payments-service both read `AccountDto`.\n3. **`pom.xml`**: add `jackson-annotations`. It currently has no dependencies at all. Bump the version too: every service depends on the same `0.1.0-SNAPSHOT`, so a breaking change under that version reaches every consumer at once, without any coordination.\n\n**accounts-service**\n4. **`AccountController.java:44`**: `toDto` passes `account.currency()`, a String. Convert it to the enum, or change the domain model as in point 5.\n5. **Optional, for consistency: `Account.java`, `AccountRepository.java:18-20`, `AccountService.java:51-54`, `CurrencyMismatchException.java`.** These use String currency internally (seed data, `checkCurrency`, the exception message). Nothing forces you to change them, because `MoneyMovementRequest.currency` stays a String. If you do move `Account` to the enum, `checkCurrency` compares an enum with a String and has to convert.\n\n**gateway-service**\n6. **`client/AccountsClient.java`** and **`GatewayController.java:38-46`**: no source change, but they need a rebuild against the new contracts. Built against the old contracts they fail to deserialise the new response, so `/api/v1/accounts` returns errors. Built against the new contracts they pass the object shape straight through to external clients.\n\n**payments-service**\n7. **`client/AccountsClient.java`**: no source change, rebuild needed.\n8. **`PaymentService.java:59-76`**: this is the risky file. It ignores the `AccountDto` that debit and credit return, but Spring still deserialises it. If the shapes don't match, the HTTP call succeeds and the debit or credit has already happened on accounts-service; only reading the response fails. That raises a `RestClientException`, not the `RestClientResponseException` the code catches. So:\n   - after a successful debit, the exception escapes. No payment is saved, there is no compensation, and the money is gone.\n   - after a successful credit, the same happens and no event is published.\n   - the compensating credit on line 73 can fail the same way.\n\n   Either deploy the new contracts here before accounts-service changes its output, or change debit/credit to return `void` or `ResponseEntity<Void>` so payments-service stops depending on the response body.\n\n**bank-platform** (not Java)\n- `README.md` documents the public API. The example `curl` commands use `\"currency\":\"CHF\"` only in `PaymentRequest`, so they still work, but the account response shape in the docs would change.\n- `scripts/smoke-test.sh` doesn't check `currency` in account responses, so it won't catch this change.\n\n## Consumers outside this workspace\n- **Public `GET /api/v1/accounts` and `/api/v1/accounts/{id}`** (gateway-service is the \"public API facade\"). Any mobile, web or partner client reading `currency` as a string breaks. This needs a versioned endpoint (e.g. `/api/v2`) or a period where both shapes are served, e.g. a new field alongside the old string.\n- **accounts-service `/accounts/**` directly**: nothing enforces that only the gateway and payments call it. Other internal callers, scripts or dashboards may exist.\n- **The `bank-contracts` artifact**: other repos under the same GitHub owner may depend on it, and they get the breaking change through the shared SNAPSHOT.\n\n## Suggested rollout\n1. Publish bank-contracts at a new version, with a `@JsonCreator` that accepts both the old string and the new object.\n2. Rebuild and deploy payments-service and gateway-service on it.\n3. Switch accounts-service's output.\n4. Handle the public API separately, with versioning or a period serving both shapes."
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 16,
+      "costUsd": 0.2963032,
+      "judgeCostUsd": 0.002017400000000001,
+      "durationSeconds": 48,
+      "startedAt": "2026-11-23T22:36:29.506Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-vbE41p/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "accounts-controller",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched AccountController\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "gateway-client",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched gateway[\\s\\S]{0,400}?AccountsClient|AccountsClient[\\s\\S]{0,200}?gateway",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "gateway-controller",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched GatewayController\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payments-client",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched payments[\\s\\S]{0,400}?AccountsClient|AccountsClient[\\s\\S]{0,200}?payments",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "public-api",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /api/v1/accounts",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "risk-reasoning",
+        "passed": true,
+        "weight": 1,
+        "explanation": "judge votes: PASS PASS PASS",
+        "withOnly": false,
+        "scored": true,
+        "judgeVotes": [
+         true,
+         true,
+         true
+        ],
+        "evidence": "I found no Kafka topic that carries this change. It only affects REST: two internal Java consumers (payments-service and gateway-service), the public gateway API, and the shared `bank-contracts` artifact. The biggest risk is in payments-service: if it can't read the new response, a payment can be debited and never credited or reversed.\n\n## Affected production files\n\n**bank-contracts** (where the change starts)\n- `AccountDto.java`: change `String currency` to `Currency currency`.\n- **New** `Currency.java`: the enum. To send it as an object you need `@JsonFormat(shape = OBJECT)`. Jackson can write an enum as an object but can't read one back by default, so the enum also needs a `@JsonCreator` that builds it from that object. Without it, every consumer below fails to read the response.\n- `pom.xml`: there are currently no dependencies, so add `jackson-annotations` for the two annotations above.\n- Keep the new `Currency` separate from the `String currency` fields in `MoneyMovementRequest`, `PaymentRequest`, `PaymentDto`, `FraudCheckRequest` and `PaymentCompletedEvent`. Those are outside this change.\n\n**accounts-service** (producer)\n- `AccountController.java:44`: `toDto` passes `account.currency()` (a String). It must convert to the enum, e.g. `Currency.valueOf(...)`, or pass the enum directly if `Account` changes.\n- `Account.java:5`: optional. The internal record could keep the String or switch to the enum. If it switches:\n  - `AccountRepository.java:18-20`: the seeded accounts use `\"CHF\"` / `\"EUR\"` literals and need enum values.\n  - `AccountService.java:51-53`: `checkCurrency` compares `account.currency()` with the String `MoneyMovementRequest.currency()`, so the comparison needs a conversion.\n  - `CurrencyMismatchException.java:9`: the constructor takes `String expected`.\n\n**payments-service** (internal consumer)\n- `client/AccountsClient.java:16,19,22`: `get`, `debit` and `credit` all read `AccountDto` responses. No code edit is needed, but it must be rebuilt against the new contracts, and reading the response must work.\n- `PaymentService.java:60,69,73`: it ignores the returned `AccountDto`, but it still has to read it. A read failure throws a `RestClientException` that is not a `RestClientResponseException`. That exception isn't caught, so the debit is already done on the accounts side, the credit/reversal never runs, and the payment isn't saved. Deploying both sides together (plus a test) is mandatory here.\n\n**gateway-service** (internal consumer, public pass-through)\n- `client/AccountsClient.java:14,17`: reads `List<AccountDto>` and `AccountDto`. It needs a rebuild and working reading of the new shape.\n- `GatewayController.java:38-46`: no code change, but it re-serialises `AccountDto`, so the new object shape reaches external clients.\n\n**Not affected:** fraud-service and notifications-service. Neither uses `AccountDto`.\n\n## HTTP endpoints carrying the change\n| Endpoint | Served by | Consumed by |\n|---|---|---|\n| `GET /accounts` | accounts-service | gateway `AccountsClient.list` |\n| `GET /accounts/{id}` | accounts-service | gateway and payments `AccountsClient.get` |\n| `POST /accounts/{id}/debit` (response) | accounts-service | payments `AccountsClient.debit` |\n| `POST /accounts/{id}/credit` (response) | accounts-service | payments `AccountsClient.credit` |\n| `GET /api/v1/accounts` | gateway-service | **external clients** |\n| `GET /api/v1/accounts/{id}` | gateway-service | **external clients** |\n\n**Kafka:** no topic carries it. The only topic is `payments.completed` (`Topics.java:5`). It carries `PaymentCompletedEvent`, which has its own String `currency` and doesn't include `AccountDto`.\n\n## Possible consumers outside this workspace\n1. **The public gateway API, `/api/v1/accounts` and `/api/v1/accounts/{id}`.** It is described as the \"Public API\" (`GatewayController.java:22`). Changing `\"currency\":\"CHF\"` to an object breaks any client outside this workspace. You'd need a `/api/v2`, a mapping layer in the gateway that keeps the String, or a deprecation period.\n2. **accounts-service `/accounts/**` directly (port 8081).** Anything else calling it directly, such as scripts, ops tools or other teams, would see the new shape too.\n3. **The `bank-contracts` artifact.** Every repo uses `0.1.0-SNAPSHOT` and CI builds each service against whatever is on `bank-contracts`'s branch, so the change hits all services at once with no versioning. Any repo outside this workspace that depends on the artifact breaks at compile time. Releasing it under a new version would let consumers move one at a time.\n\nNon-Java scripts don't need changes: `smoke-test.sh` and the README examples only send `currency` in payment requests and never read it from account responses."
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 19,
+      "costUsd": 0.3148677,
+      "judgeCostUsd": 0.0016619000000000009,
+      "durationSeconds": 45,
+      "startedAt": "2026-11-23T22:36:30.448Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-9zkpsg/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "accounts-controller",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched AccountController\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "gateway-client",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched gateway[\\s\\S]{0,400}?AccountsClient|AccountsClient[\\s\\S]{0,200}?gateway",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "gateway-controller",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched GatewayController\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payments-client",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched payments[\\s\\S]{0,400}?AccountsClient|AccountsClient[\\s\\S]{0,200}?payments",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "public-api",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /api/v1/accounts",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "risk-reasoning",
+        "passed": true,
+        "weight": 1,
+        "explanation": "judge votes: PASS PASS PASS",
+        "withOnly": false,
+        "scored": true,
+        "judgeVotes": [
+         true,
+         true,
+         true
+        ],
+        "evidence": "**Summary:** `AccountDto` only travels over HTTP. No Kafka topic carries it. In production code, 3 repositories are affected (bank-contracts, accounts-service, gateway-service) plus payments-service, which needs a rebuild and contains a real failure risk. fraud-service and notifications-service are not affected.\n\n## Affected production files\n\n| # | Repo | File | What has to change |\n|---|---|---|---|\n| 1 | **bank-contracts** | `AccountDto.java:5` | Change `String currency` to `Currency currency`. |\n| 2 | **bank-contracts** | *new* `Currency.java` | Add the enum, at least `CHF` and `EUR` (the seeded accounts use both), with `@JsonFormat(shape = OBJECT)` plus getters, or a custom serializer/deserializer, so it serialises as an object such as `{\"code\":\"CHF\",...}`. It must also **deserialise** from that object, because two services read `AccountDto` back in. Bump the version: every service pins the same `0.1.0-SNAPSHOT`, so a snapshot republish would silently change every consumer's next build. |\n| 3 | **accounts-service** | `AccountController.java:44` | `toDto` passes `account.currency()`, which is a `String`. Either map it with `Currency.valueOf(...)` or change the domain model (rows 4\u20137). Response bodies change on `GET /accounts`, `GET /accounts/{id}`, `POST /accounts/{id}/debit` and `POST /accounts/{id}/credit`. |\n| 4 | accounts-service (optional) | `Account.java:5` | Only if the internal model moves to the enum as well: `String currency` becomes `Currency`. |\n| 5 | accounts-service (only if row 4) | `AccountRepository.java:18-20` | The seed data uses the strings `\"CHF\"`, `\"CHF\"`, `\"EUR\"`; these become `Currency.CHF` etc. |\n| 6 | accounts-service (only if row 4) | `AccountService.java:51-53` | `checkCurrency` compares `account.currency().equals(currency)`, where `currency` comes from `MoneyMovementRequest`, which **stays a String**. Once `Account.currency` is an enum, `equals` against a String is always false, so every debit and credit would be rejected. It needs an explicit conversion, e.g. `Currency.valueOf(request)` or `.name()`. |\n| 7 | accounts-service (only if row 4) | `CurrencyMismatchException.java:9` | The constructor takes `String expected`. Change the parameter type or pass `.name()`. |\n| 8 | **gateway-service** | `client/AccountsClient.java:14,17` | No code change, but it deserialises `List<AccountDto>` / `AccountDto` from accounts-service. It must be rebuilt against the new contracts **before or together with** the accounts-service release. With the old jar, Jackson fails on an object arriving where it expects a String. |\n| 9 | gateway-service | `GatewayController.java:38-46` | No code change. It passes `AccountDto` straight through, so the **public** responses of `GET /api/v1/accounts` and `GET /api/v1/accounts/{id}` change shape. |\n| 10 | **payments-service** | `client/AccountsClient.java:16,19,22` | Needs a rebuild against the new contracts. `debit`/`credit` responses are deserialised into `AccountDto` even though the result is never used. |\n| 11 | payments-service | `PaymentService.java:59-76` | This is the main risk. If accounts-service ships first, the **debit has already been applied** when deserialising the response fails. That failure is a `RestClientException`, not the `RestClientResponseException` caught at lines 61 and 70, so it escapes. The result: money debited, no payment record saved, and the credit failure path never runs its compensation. The fix is a coordinated rollout, or making the client tolerant, e.g. declaring `debit`/`credit` to return `void` or `ResponseEntity<Void>`. |\n\n## Not affected\n- **fraud-service**: doesn't use `AccountDto`.\n- **notifications-service**: only reads `PaymentCompletedEvent.currency`, which stays a String.\n- `MoneyMovementRequest`, `PaymentRequest`, `PaymentDto`, `FraudCheckRequest` and `PaymentCompletedEvent` keep `String currency`. That's a design inconsistency worth deciding on deliberately, but it isn't affected by this change.\n- `bank-platform/scripts/smoke-test.sh` and the README only send and check currency on payments, not accounts, so the smoke test won't catch this break.\n\n## What carries the change\n- **HTTP, internal:** accounts-service `GET /accounts`, `GET /accounts/{id}`, `POST /accounts/{id}/debit`, `POST /accounts/{id}/credit`.\n- **HTTP, public:** gateway-service `GET /api/v1/accounts` and `GET /api/v1/accounts/{id}`.\n- **Kafka:** none. The only topic, `payments.completed` (`Topics.java`), carries `PaymentCompletedEvent`, which has no `AccountDto`.\n\n## Possible consumers outside this workspace\n1. **The public gateway API (`/api/v1/accounts*`).** The README describes it as the external client entry point. Changing `\"currency\":\"CHF\"` to an object breaks any external client. Consider a `/api/v2`, or a gateway-side mapping that keeps the String for v1.\n2. **accounts-service's `/accounts` endpoints**, if anything outside the workspace calls them directly (ports are exposed in docker-compose).\n3. **The `bank-contracts` artifact.** It's a shared library that other repos may depend on beyond these five services. Because everything uses the same `0.1.0-SNAPSHOT`, such repos would pick up the change at compile time without opting in.\n\nSuggested rollout: release bank-contracts with a new version, then gateway-service and payments-service (with a deserializer that accepts both String and object), then accounts-service."
+       }
+      ]
+     }
+    ]
+   },
+   "aggregates": {
+    "score": 0.9444444444444445,
+    "passRate": 0.6666666666666666,
+    "scoreWithout": 1,
+    "passRateWithout": 1,
+    "delta": -0.05555555555555547
+   }
+  },
+  {
+   "name": "event-channel",
+   "dir": "evals/event-channel",
+   "source": "mixed",
+   "promptMarkdown": "We plan to remove `PaymentCompletedEvent.channel`. Who produces and who consumes this event, and what breaks? List every affected production source file (file name and repository), what has to change in it, and say which HTTP endpoints or Kafka topics carry the change. Ignore test code.",
+   "runsPerCase": 3,
+   "timeoutSeconds": 600,
+   "maxTurns": 30,
+   "graders": [
+    {
+     "name": "notification-service",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "last_message",
+      "pattern": "NotificationService\\.java",
+      "flags": "i",
+      "match": "contains"
+     }
+    },
+    {
+     "name": "payment-service",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "last_message",
+      "pattern": "PaymentService\\.java",
+      "flags": "i",
+      "match": "contains"
+     }
+    },
+    {
+     "name": "publisher",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "last_message",
+      "pattern": "PaymentEventPublisher",
+      "flags": "i",
+      "match": "contains"
+     }
+    },
+    {
+     "name": "topic",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "last_message",
+      "pattern": "payments\\.completed",
+      "flags": "i",
+      "match": "contains"
+     }
+    },
+    {
+     "name": "used-repograph",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "trace",
+      "pattern": "mcp__plugin_repograph_repograph__",
+      "flags": "",
+      "match": "contains",
+      "arm": "with-only"
+     }
+    }
+   ],
+   "arms": {
+    "with": [
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 15,
+      "costUsd": 0.2189796,
+      "judgeCostUsd": 0,
+      "durationSeconds": 35,
+      "startedAt": "2026-11-23T22:32:37.364Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-eWXAWo/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "notification-service",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched NotificationService\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payment-service",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched PaymentService\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "publisher",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched PaymentEventPublisher",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "topic",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched payments\\.completed",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "used-repograph",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched mcp__plugin_repograph_repograph__",
+        "withOnly": true,
+        "scored": false
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 14,
+      "costUsd": 0.2036156,
+      "judgeCostUsd": 0,
+      "durationSeconds": 34,
+      "startedAt": "2026-11-23T22:32:40.762Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-5aP3rR/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "notification-service",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched NotificationService\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payment-service",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched PaymentService\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "publisher",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched PaymentEventPublisher",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "topic",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched payments\\.completed",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "used-repograph",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched mcp__plugin_repograph_repograph__",
+        "withOnly": true,
+        "scored": false
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 14,
+      "costUsd": 0.1972024,
+      "judgeCostUsd": 0,
+      "durationSeconds": 31,
+      "startedAt": "2026-11-23T22:33:12.510Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-0MkJwP/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "notification-service",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched NotificationService\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payment-service",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched PaymentService\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "publisher",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched PaymentEventPublisher",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "topic",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched payments\\.completed",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "used-repograph",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched mcp__plugin_repograph_repograph__",
+        "withOnly": true,
+        "scored": false
+       }
+      ]
+     }
+    ],
+    "without": [
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 11,
+      "costUsd": 0.20206659999999999,
+      "judgeCostUsd": 0,
+      "durationSeconds": 29,
+      "startedAt": "2026-11-23T22:33:14.737Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-vYdehp/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "notification-service",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched NotificationService\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payment-service",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched PaymentService\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "publisher",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched PaymentEventPublisher",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "topic",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched payments\\.completed",
+        "withOnly": false,
+        "scored": true
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 13,
+      "costUsd": 0.240892,
+      "judgeCostUsd": 0,
+      "durationSeconds": 35,
+      "startedAt": "2026-11-23T22:33:15.638Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-5iNkMu/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "notification-service",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched NotificationService\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payment-service",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched PaymentService\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "publisher",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched PaymentEventPublisher",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "topic",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched payments\\.completed",
+        "withOnly": false,
+        "scored": true
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 12,
+      "costUsd": 0.2594816,
+      "judgeCostUsd": 0,
+      "durationSeconds": 31,
+      "startedAt": "2026-11-23T22:33:16.554Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-W01S1Q/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "notification-service",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched NotificationService\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payment-service",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched PaymentService\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "publisher",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched PaymentEventPublisher",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "topic",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched payments\\.completed",
+        "withOnly": false,
+        "scored": true
+       }
+      ]
+     }
+    ]
+   },
+   "aggregates": {
+    "score": 1,
+    "passRate": 1,
+    "scoreWithout": 1,
+    "passRateWithout": 1,
+    "delta": 0
+   }
+  },
+  {
+   "name": "fraud-riskscore",
+   "dir": "evals/fraud-riskscore",
+   "source": "mixed",
+   "promptMarkdown": "We want to rename `FraudCheckResult.riskScore` to `riskPoints`. What breaks, across all repositories? List every affected production source file (file name and repository), what has to change in it, and say which HTTP endpoints or Kafka topics carry the change. Ignore test code.",
+   "runsPerCase": 3,
+   "timeoutSeconds": 600,
+   "maxTurns": 30,
+   "graders": [
+    {
+     "name": "endpoint",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "last_message",
+      "pattern": "/fraud/checks",
+      "flags": "i",
+      "match": "contains"
+     }
+    },
+    {
+     "name": "fraud-controller",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "last_message",
+      "pattern": "FraudController\\.java",
+      "flags": "i",
+      "match": "contains"
+     }
+    },
+    {
+     "name": "fraud-rules",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "last_message",
+      "pattern": "FraudRules\\.java",
+      "flags": "i",
+      "match": "contains"
+     }
+    },
+    {
+     "name": "payments-fraud-client",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "last_message",
+      "pattern": "FraudClient",
+      "flags": "i",
+      "match": "contains"
+     }
+    },
+    {
+     "name": "silent-break",
+     "type": "llm",
+     "weight": 1,
+     "graderMarkdown": "The answer points out that renaming the record component also renames the JSON property sent over\n`POST /fraud/checks`, so payments-service (which receives `FraudCheckResult` through its HTTP client) will silently\nget a missing or default value unless both sides are deployed together or the old name is kept (e.g. `@JsonProperty`\nor `@JsonAlias`). Answers that only list compile errors fail.",
+     "config": {
+      "criteria": "The answer points out that renaming the record component also renames the JSON property sent over\n`POST /fraud/checks`, so payments-service (which receives `FraudCheckResult` through its HTTP client) will silently\nget a missing or default value unless both sides are deployed together or the old name is kept (e.g. `@JsonProperty`\nor `@JsonAlias`). Answers that only list compile errors fail.",
+      "focus": "last_message"
+     }
+    },
+    {
+     "name": "used-repograph",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "trace",
+      "pattern": "mcp__plugin_repograph_repograph__",
+      "flags": "",
+      "match": "contains",
+      "arm": "with-only"
+     }
+    }
+   ],
+   "arms": {
+    "with": [
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 13,
+      "costUsd": 0.1794597,
+      "judgeCostUsd": 0.0031213000000000005,
+      "durationSeconds": 34,
+      "startedAt": "2026-11-23T22:33:43.752Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-KXAt01/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "endpoint",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /fraud/checks",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "fraud-controller",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched FraudController\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "fraud-rules",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched FraudRules\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payments-fraud-client",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched FraudClient",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "silent-break",
+        "passed": true,
+        "weight": 1,
+        "explanation": "judge votes: FAIL PASS PASS",
+        "withOnly": false,
+        "scored": true,
+        "judgeVotes": [
+         false,
+         true,
+         true
+        ],
+        "evidence": "Only two production files have to change: the record itself in `bank-contracts` and one log statement in `fraud-service`. One HTTP endpoint carries the field, and no Kafka topic does.\n\n## Production files that must change\n\n| Repository | File | What has to change |\n|---|---|---|\n| **bank-contracts** | `src/main/java/dev/demobank/contracts/FraudCheckResult.java:3` | Rename the record component: `record FraudCheckResult(boolean approved, int riskPoints, String reason)`. The accessor becomes `riskPoints()`. |\n| **fraud-service** | `src/main/java/dev/demobank/fraud/FraudController.java:28` | Change `result.riskScore()` to `result.riskPoints()` in the log call. Without this it won't compile. You may also want to change the `score=` log label on line 27, though that's optional. |\n\n## Production files that use the type but need no code change\n\n- **fraud-service** `src/main/java/dev/demobank/fraud/FraudRules.java:25,28,31,33`: the four `new FraudCheckResult(...)` calls pass arguments by position, so they still compile.\n- **payments-service** `src/main/java/dev/demobank/payments/client/FraudClient.java:13`: only uses the type as the return value of the HTTP client.\n- **payments-service** `src/main/java/dev/demobank/payments/PaymentService.java:49\u201353`: reads only `approved()` and `reason()`, never the risk score. It doesn't copy the score into `PaymentDto` or `PaymentCompletedEvent` either.\n\nNone of the other repositories (accounts, gateway, notifications) reference the field. I also searched the whole workspace for \"risk\" in any case, including config files, and found no other uses.\n\n## Wire impact\n\n**HTTP:** `POST /fraud/checks` (`FraudController#check`, fraud-service) returns `FraudCheckResult`, so the JSON field changes from `\"riskScore\"` to `\"riskPoints\"`.\n- Its only caller in the workspace is payments-service, through `FraudClient`.\n- Because payments-service never reads the field, a version mismatch during rollout won't break it, as long as Jackson ignores unknown properties. Spring Boot's default does.\n- If anything outside this workspace calls `/fraud/checks` (dashboards, other teams), it will silently stop getting the score. Static analysis can't see such callers.\n\n**Kafka:** none. The only topic, `payments.completed`, carries `PaymentCompletedEvent`, which doesn't contain the risk score.\n\n**Gateway public API:** not affected. No `/api/v1/...` response exposes `FraudCheckResult`.\n\n## Rollout order\n1. Release `bank-contracts` with the renamed field.\n2. Update fraud-service (the log call) and deploy it. The field name on the wire changes at this point.\n3. Bump payments-service to the new contracts version. It doesn't strictly have to happen at the same time, since it never reads the field.\n\nIf you need the old JSON name kept for unknown outside callers, put `@JsonProperty(\"riskScore\")` on the renamed component, or temporarily emit both names.\n\nTest code is excluded as you asked. For when you get to it: `FraudRulesTest.java:19,27` (fraud-service) calls `riskScore()` and won't compile after the rename. `PaymentServiceTest` (payments-service) passes arguments by position and is unaffected."
+       },
+       {
+        "name": "used-repograph",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched mcp__plugin_repograph_repograph__",
+        "withOnly": true,
+        "scored": false
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 9,
+      "costUsd": 0.1646481,
+      "judgeCostUsd": 0.0005705000000000007,
+      "durationSeconds": 25,
+      "startedAt": "2026-11-23T22:33:43.922Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-YBeVn1/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "endpoint",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /fraud/checks",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "fraud-controller",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched FraudController\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "fraud-rules",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched FraudRules\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payments-fraud-client",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched FraudClient",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "silent-break",
+        "passed": true,
+        "weight": 1,
+        "explanation": "judge votes: PASS PASS PASS",
+        "withOnly": false,
+        "scored": true,
+        "judgeVotes": [
+         true,
+         true,
+         true
+        ],
+        "evidence": "Only one compile break in production code, but the JSON field name changes too. Only fraud-service and payments-service talk to each other with this type, and they would have to be released together.\n\n## Production files affected\n\n**bank-contracts**\n- `bank-contracts/src/main/java/dev/demobank/contracts/FraudCheckResult.java:3`: rename the record component in `record FraudCheckResult(boolean approved, int riskScore, String reason)`. This also renames the accessor `riskScore()` \u2192 `riskPoints()` and the JSON property `\"riskScore\"` \u2192 `\"riskPoints\"`.\n\n**fraud-service**\n- `fraud-service/src/main/java/dev/demobank/fraud/FraudController.java:28`: **compile break.** The log line calls `result.riskScore()`; change it to `result.riskPoints()`. You may also want to change the `score=` label on line 27.\n- `fraud-service/src/main/java/dev/demobank/fraud/FraudRules.java:25,28,31,33`: no edit needed. It builds the record by position (`new FraudCheckResult(false, 100, ...)`), so it still compiles. It is listed only because it produces the value.\n\n**payments-service**\n- `payments-service/src/main/java/dev/demobank/payments/client/FraudClient.java:14`: no code change needed. The `@HttpExchange` client turns the response JSON back into `FraudCheckResult`, so it is affected on the wire (see the rollout risk below).\n- `payments-service/src/main/java/dev/demobank/payments/PaymentService.java:49-53`: no change needed. It reads only `approved()` and `reason()`, never the score.\n\naccounts-service, gateway-service and notifications-service don't use `FraudCheckResult` at all.\n\n## HTTP endpoints and Kafka topics\n- **`POST /fraud/checks`** (fraud-service `FraudController#check`) is the only endpoint carrying the type. Its response body key changes from `riskScore` to `riskPoints`. The only caller in the workspace is payments-service, through `FraudClient`.\n- **No Kafka topics are affected.** The only topic, `payments.completed`, carries `PaymentCompletedEvent`, which doesn't include the fraud result.\n- **Not exposed through the public API.** The gateway's `/api/v1/...` endpoints return `PaymentDto`, and the score isn't copied into it.\n\n## Rollout risk\nIf the two services run different versions of the contract, the JSON key won't match. Jackson then drops the unknown key and leaves the `int` at its default, so payments-service reads `0`. Nothing fails today, because payments-service never reads the score. It would become a silent bug if something starts using it later. To make the rollout safe, either:\n- deploy fraud-service and payments-service together, or\n- keep the old name as an alias during the transition: `@JsonAlias(\"riskScore\")` on the new component, or emit both keys.\n\n## Caveats\n- This is based on the repograph static graph and a grep over `src/main` for `riskScore`/`risk_score`/`FraudCheckResult`. They agree.\n- Neither can see callers of `/fraud/checks` outside these repositories, such as dashboards or other teams' services.\n- Tests that will also need updating, excluded as requested: `FraudRulesTest` and `PaymentServiceTest`."
+       },
+       {
+        "name": "used-repograph",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched mcp__plugin_repograph_repograph__",
+        "withOnly": true,
+        "scored": false
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 12,
+      "costUsd": 0.1877741,
+      "judgeCostUsd": 0.001932099999999999,
+      "durationSeconds": 35,
+      "startedAt": "2026-11-23T22:33:47.629Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-T4PfUx/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "endpoint",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /fraud/checks",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "fraud-controller",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched FraudController\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "fraud-rules",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched FraudRules\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payments-fraud-client",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched FraudClient",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "silent-break",
+        "passed": true,
+        "weight": 1,
+        "explanation": "judge votes: PASS PASS PASS",
+        "withOnly": false,
+        "scored": true,
+        "judgeVotes": [
+         true,
+         true,
+         true
+        ],
+        "evidence": "Renaming `riskScore` breaks little. Only two production files outside the contract itself are affected, and no Kafka topic carries the type. I got this from the repograph impact analysis and checked it with a workspace-wide grep for `riskScore` and `risk` (excluding `src/test`). I read each file listed below.\n\n## Files that must change\n\n| Repository | File | Change | Kind of break |\n|---|---|---|---|\n| **bank-contracts** | `src/main/java/dev/demobank/contracts/FraudCheckResult.java:3` | Rename the record component: `record FraudCheckResult(boolean approved, int riskPoints, String reason)` | Source of the change. It also changes the accessor and the JSON property name. |\n| **fraud-service** | `src/main/java/dev/demobank/fraud/FraudController.java:28` | Change `result.riskScore()` to `result.riskPoints()` in the log statement. The log label `score=` could also become `points=`, but that's optional. | Compile break |\n| **fraud-service** | `src/main/java/dev/demobank/fraud/FraudRules.java:25,28,31,33` | No code edit needed, because it builds the record by position (`new FraudCheckResult(false, 100, ...)`). It just has to be rebuilt against the new contract version. | None, rebuild only |\n| **payments-service** | `src/main/java/dev/demobank/payments/client/FraudClient.java:13-14` | No code edit. It uses `FraudCheckResult` as the response type of the HTTP client, so the new name affects how the JSON is deserialised. | Silent wire break (see below) |\n| **payments-service** | `src/main/java/dev/demobank/payments/PaymentService.java:49-53` | No edit. It only reads `approved()` and `reason()`, never the risk score. | None |\n\nNo other production code reads the field: gateway-service, accounts-service and notifications-service don't use `FraudCheckResult`. The configuration files, `docker-compose.yml`, `smoke-test.sh` and the README don't mention `riskScore` either.\n\n## HTTP endpoints\n- **`POST /fraud/checks`** (fraud-service, `FraudController#check`). The JSON response property changes from `\"riskScore\"` to `\"riskPoints\"`. The only caller in the workspace is payments-service, through `FraudClient`. Because payments-service never reads the value, an old and a new payments-service would both keep working; a version that doesn't know the field just gets `0` or ignores it.\n- The gateway doesn't route to `/fraud/**`, so the endpoint isn't exposed externally through the gateway. The analysis can't see callers outside this workspace, though. If anything else (dashboards, scripts, other teams) calls fraud-service directly and reads `riskScore`, it will silently lose the value.\n\n## Kafka topics\n- None. `FraudCheckResult` isn't part of any event payload.\n\n## Test code (excluded, for awareness)\nTests that read the field by name will fail to compile:\n- fraud-service: `FraudRulesTest.java:19,27`\n\nTests that only construct the record by position need no edit:\n- payments-service: `PaymentServiceTest.java:53,69,82,94`\n\n## Rollout order\n1. Release the new `bank-contracts` version.\n2. Update and release fraud-service.\n3. Bump payments-service to the new contract whenever convenient. It doesn't use the field, so the order doesn't matter for it.\n\nTo avoid breaking callers outside the workspace, you could temporarily keep the old JSON name with `@JsonProperty(\"riskScore\")` on the renamed component, or send both properties."
+       },
+       {
+        "name": "used-repograph",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched mcp__plugin_repograph_repograph__",
+        "withOnly": true,
+        "scored": false
+       }
+      ]
+     }
+    ],
+    "without": [
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 6,
+      "costUsd": 0.1342829,
+      "judgeCostUsd": 0.0017983,
+      "durationSeconds": 24,
+      "startedAt": "2026-11-23T22:33:50.954Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-93HVdF/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "endpoint",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /fraud/checks",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "fraud-controller",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched FraudController\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "fraud-rules",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched FraudRules\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payments-fraud-client",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched FraudClient",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "silent-break",
+        "passed": true,
+        "weight": 1,
+        "explanation": "judge votes: PASS PASS PASS",
+        "withOnly": false,
+        "scored": true,
+        "judgeVotes": [
+         true,
+         true,
+         true
+        ],
+        "evidence": "Only one production file actually breaks at compile time. The field never leaves the synchronous fraud-service \u2192 payments-service HTTP call, and no Kafka topic carries it.\n\n### Files that need changes\n\n| Repository | File | Change |\n|---|---|---|\n| **bank-contracts** | `src/main/java/dev/demobank/contracts/FraudCheckResult.java:3` | Rename the record component: `record FraudCheckResult(boolean approved, int riskPoints, String reason)`. This also renames the accessor to `riskPoints()` and the JSON property to `\"riskPoints\"`. |\n| **fraud-service** | `src/main/java/dev/demobank/fraud/FraudController.java:28` | Change `result.riskScore()` to `result.riskPoints()` in the log statement. You may also want to change the log label `score=` to match, but nothing requires it. This is the only compile error in production code. |\n\n### Files that use `FraudCheckResult` but need no edits\n- **fraud-service** `FraudRules.java:25-33` builds the result with the positional constructor (`new FraudCheckResult(false, 100, ...)`), so the rename doesn't affect it. It just needs to be rebuilt against the new contracts version.\n- **payments-service** `client/FraudClient.java:14` deserializes the response. This is where the change matters at runtime (see below).\n- **payments-service** `PaymentService.java:49-55` reads only `approved()` and `reason()`, never the score.\n\n### HTTP endpoints and Kafka topics\n- **HTTP: `POST /fraud/checks`** (served by `FraudController`, called by `FraudClient` in payments-service). The JSON response field changes from `riskScore` to `riskPoints`. This is the only place the change travels between services.\n  - **Deployment risk:** if fraud-service and payments-service run different versions of bank-contracts, Jackson will drop the unknown property and leave the score at `0` instead of failing. Today nothing breaks, because payments-service never reads the score. Any external client of `/fraud/checks` that reads `riskScore` would silently get nothing.\n- **Kafka: none.** `PaymentCompletedEvent` doesn't include the fraud result, so no topic changes.\n- **gateway-service, accounts-service and notifications-service** don't reference `FraudCheckResult`, `riskScore` or the fraud endpoint, so they aren't affected. I also searched config, scripts and docs (YAML, `docker-compose.yml`, `smoke-test.sh`, README) for `riskScore`/`risk_score` and found no matches.\n\nYou said to ignore tests, but note that `FraudRulesTest.java:19,27` in fraud-service calls `riskScore()`, so the fraud-service test build will fail until it's updated. The `PaymentServiceTest` constructor calls are positional and will still compile."
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 8,
+      "costUsd": 0.1548193,
+      "judgeCostUsd": 0.0007343000000000002,
+      "durationSeconds": 27,
+      "startedAt": "2026-11-23T22:34:08.800Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-7PVqkU/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "endpoint",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /fraud/checks",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "fraud-controller",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched FraudController\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "fraud-rules",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched FraudRules\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payments-fraud-client",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched FraudClient",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "silent-break",
+        "passed": true,
+        "weight": 1,
+        "explanation": "judge votes: PASS PASS PASS",
+        "withOnly": false,
+        "scored": true,
+        "judgeVotes": [
+         true,
+         true,
+         true
+        ],
+        "evidence": "The rename touches only 2 production files, both in two repositories. I searched every repository for `riskScore` (any casing) and `FraudCheckResult`, and they don't appear in gateway-service, notifications-service, accounts-service, any config file, or the bank-platform scripts.\n\n## Files that must change\n\n| Repository | File | What changes |\n|---|---|---|\n| **bank-contracts** | `src/main/java/dev/demobank/contracts/FraudCheckResult.java:3` | Rename the record field: `record FraudCheckResult(boolean approved, int riskPoints, String reason)`. This also renames the accessor `riskScore()` to `riskPoints()` and the JSON property from `\"riskScore\"` to `\"riskPoints\"`. |\n| **fraud-service** | `src/main/java/dev/demobank/fraud/FraudController.java:28` | Change `result.riskScore()` to `result.riskPoints()` in the log statement. You may also want to change the log label `score=` to `points=`. This is the only line that won't compile without the change. |\n\n## Files that use the type but don't need edits\n\n- **fraud-service** `FraudRules.java:25-33` builds the result with the positional constructor (`new FraudCheckResult(false, 100, ...)`), so the rename doesn't affect it.\n- **payments-service** `client/FraudClient.java:14` only declares `FraudCheckResult` as the return type.\n- **payments-service** `PaymentService.java:49-53` reads only `fraud.approved()` and `fraud.reason()`. It never reads the risk score, so it still compiles and behaves the same.\n\nTo pick up the change, both fraud-service and payments-service need to move to the new bank-contracts version.\n\n## Endpoints and topics affected\n\n- **HTTP: `POST /fraud/checks`** (fraud-service, port 8084). This is the only place the change travels between services. The response JSON field changes from `riskScore` to `riskPoints`. The one caller is payments-service, through `FraudClient` (`@HttpExchange(\"/fraud\")` + `@PostExchange(\"/checks\")`). The gateway doesn't route `/fraud`, so no external client sees this field.\n- **Kafka: none.** `FraudCheckResult` isn't part of `PaymentCompletedEvent` or any other published event, and the risk score is never copied into one.\n\n## Deployment risk\n\nThe risk is low, but there's one thing to watch. If fraud-service and payments-service are deployed separately, for a while one will be on the old contract and the other on the new one. Jackson will then either skip the unknown property or leave the field at `0`. I haven't checked whether these services change Spring Boot's default, which ignores unknown properties. Since payments-service never reads the value, the mismatch has no functional effect. You could still add `@JsonAlias(\"riskScore\")` to the new field during the transition if you'd rather be safe.\n\nTests aren't in the table, as you asked, but they'll also need the rename: `FraudRulesTest` calls `result.riskScore()` at lines 19 and 27."
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 8,
+      "costUsd": 0.1861031,
+      "judgeCostUsd": 0.0006865000000000013,
+      "durationSeconds": 32,
+      "startedAt": "2026-11-23T22:34:14.874Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-9dc3ru/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "endpoint",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /fraud/checks",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "fraud-controller",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched FraudController\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "fraud-rules",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched FraudRules\\.java",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payments-fraud-client",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched FraudClient",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "silent-break",
+        "passed": true,
+        "weight": 1,
+        "explanation": "judge votes: PASS PASS PASS",
+        "withOnly": false,
+        "scored": true,
+        "judgeVotes": [
+         true,
+         true,
+         true
+        ],
+        "evidence": "Only two production files need editing. A third file is affected only at runtime, through the JSON wire format.\n\n## Production files\n\n| # | Repository | File | What has to change |\n|---|---|---|---|\n| 1 | **bank-contracts** | `src/main/java/dev/demobank/contracts/FraudCheckResult.java:3` | Rename the record component: `record FraudCheckResult(boolean approved, int riskPoints, String reason)`. This renames the accessor to `riskPoints()` and the JSON property to `\"riskPoints\"`. |\n| 2 | **fraud-service** | `src/main/java/dev/demobank/fraud/FraudController.java:28` | `result.riskScore()` \u2192 `result.riskPoints()` in the log statement. This is the only call to the accessor in production code. You may also want to change the log label `score=` (line 27), but that's optional. |\n| 3 | **payments-service** | `client/FraudClient.java`, `PaymentService.java` | **No source edit.** `PaymentService` reads only `fraud.approved()` and `fraud.reason()`, never the score, so it compiles unchanged. It still has to be rebuilt against the new contracts jar (see below). |\n\n`fraud-service/.../FraudRules.java` (lines 25\u201333) builds results with positional arguments (`new FraudCheckResult(false, 100, ...)`), so it still compiles. It only needs a rebuild.\n\n**accounts-service, gateway-service and notifications-service** depend on `bank-contracts` but never use `FraudCheckResult`, so nothing changes there.\n\n## Endpoints and topics carrying the change\n\n- **HTTP: `POST /fraud/checks`**, from payments-service (`FraudClient`) to fraud-service (`FraudController`). The response body changes from `\"riskScore\"` to `\"riskPoints\"`. There's no custom Jackson naming strategy or `@JsonProperty` anywhere, so the record component name is exactly the field name on the wire.\n- **The gateway doesn't expose this endpoint.** gateway-service has no fraud route, so external clients never see the field.\n- **Kafka: none.** The score isn't copied into `PaymentCompletedEvent` or `PaymentDto`, so no topic payload changes.\n\n## Rollout risk\n\nAll services use `bank-contracts 0.1.0-SNAPSHOT`, and CI checks out `bank-contracts` at a matching branch or at `main`. If fraud-service and payments-service are deployed at different times, one side sends or expects `riskScore` while the other uses `riskPoints`:\n- Spring Boot's default Jackson setup ignores unknown properties, so the call won't fail.\n- payments-service would just get the default `0` for the score field. Nothing reads that today, so it's harmless now. It would become a silent bug if code starts using the score.\n- If you want a safe transition, temporarily add `@JsonAlias(\"riskScore\")` to the renamed component.\n\n## Outside the scope you asked about\n\nTests you said to ignore: `FraudRulesTest` calls `riskScore()` on lines 19 and 27 and will fail to compile. `PaymentServiceTest` uses the positional constructor and is unaffected. No docs, scripts or YAML mention the field: `smoke-test.sh` and the README refer to fraud only in general terms."
+       }
+      ]
+     }
+    ]
+   },
+   "aggregates": {
+    "score": 1,
+    "passRate": 1,
+    "scoreWithout": 1,
+    "passRateWithout": 1,
+    "delta": 0
+   }
+  },
+  {
+   "name": "payment-flow",
+   "dir": "evals/payment-flow",
+   "source": "mixed",
+   "promptMarkdown": "Trace what happens, service by service and in order, when a client calls `POST /api/v1/payments` on the gateway. For every hop name the calling class, the target service and endpoint or topic, and the handling class.",
+   "runsPerCase": 3,
+   "timeoutSeconds": 600,
+   "maxTurns": 30,
+   "graders": [
+    {
+     "name": "credit",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "last_message",
+      "pattern": "/credit",
+      "flags": "i",
+      "match": "contains"
+     }
+    },
+    {
+     "name": "debit",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "last_message",
+      "pattern": "/debit",
+      "flags": "i",
+      "match": "contains"
+     }
+    },
+    {
+     "name": "fraud",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "last_message",
+      "pattern": "/fraud/checks",
+      "flags": "i",
+      "match": "contains"
+     }
+    },
+    {
+     "name": "notifications",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "last_message",
+      "pattern": "NotificationService|PaymentEventListener",
+      "flags": "i",
+      "match": "contains"
+     }
+    },
+    {
+     "name": "payments-endpoint",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "last_message",
+      "pattern": "POST\\s*/payments|/payments\\b",
+      "flags": "i",
+      "match": "contains"
+     }
+    },
+    {
+     "name": "topic",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "last_message",
+      "pattern": "payments\\.completed",
+      "flags": "i",
+      "match": "contains"
+     }
+    },
+    {
+     "name": "used-repograph",
+     "type": "regex",
+     "weight": 1,
+     "config": {
+      "target": "trace",
+      "pattern": "mcp__plugin_repograph_repograph__",
+      "flags": "",
+      "match": "contains",
+      "arm": "with-only"
+     }
+    }
+   ],
+   "arms": {
+    "with": [
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 15,
+      "costUsd": 0.20832299999999998,
+      "judgeCostUsd": 0,
+      "durationSeconds": 30,
+      "startedAt": "2026-11-23T22:34:17.717Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-WZODCL/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "credit",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /credit",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "debit",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /debit",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "fraud",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /fraud/checks",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "notifications",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched NotificationService|PaymentEventListener",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payments-endpoint",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched POST\\s*/payments|/payments\\b",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "topic",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched payments\\.completed",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "used-repograph",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched mcp__plugin_repograph_repograph__",
+        "withOnly": true,
+        "scored": false
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 11,
+      "costUsd": 0.1745408,
+      "judgeCostUsd": 0,
+      "durationSeconds": 27,
+      "startedAt": "2026-11-23T22:34:22.486Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-GSKoqa/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "credit",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /credit",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "debit",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /debit",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "fraud",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /fraud/checks",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "notifications",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched NotificationService|PaymentEventListener",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payments-endpoint",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched POST\\s*/payments|/payments\\b",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "topic",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched payments\\.completed",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "used-repograph",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched mcp__plugin_repograph_repograph__",
+        "withOnly": true,
+        "scored": false
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 11,
+      "costUsd": 0.1808612,
+      "judgeCostUsd": 0,
+      "durationSeconds": 30,
+      "startedAt": "2026-11-23T22:34:35.642Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-6NH3Uw/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "credit",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /credit",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "debit",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /debit",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "fraud",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /fraud/checks",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "notifications",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched NotificationService|PaymentEventListener",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payments-endpoint",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched POST\\s*/payments|/payments\\b",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "topic",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched payments\\.completed",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "used-repograph",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched mcp__plugin_repograph_repograph__",
+        "withOnly": true,
+        "scored": false
+       }
+      ]
+     }
+    ],
+    "without": [
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 17,
+      "costUsd": 0.31209739999999997,
+      "judgeCostUsd": 0,
+      "durationSeconds": 34,
+      "startedAt": "2026-11-23T22:34:47.136Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-ipn0vu/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "credit",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /credit",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "debit",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /debit",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "fraud",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /fraud/checks",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "notifications",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched NotificationService|PaymentEventListener",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payments-endpoint",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched POST\\s*/payments|/payments\\b",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "topic",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched payments\\.completed",
+        "withOnly": false,
+        "scored": true
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 20,
+      "costUsd": 0.26164339999999997,
+      "judgeCostUsd": 0,
+      "durationSeconds": 31,
+      "startedAt": "2026-11-23T22:34:47.734Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-KMwEXB/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "credit",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /credit",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "debit",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /debit",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "fraud",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /fraud/checks",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "notifications",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched NotificationService|PaymentEventListener",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payments-endpoint",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched POST\\s*/payments|/payments\\b",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "topic",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched payments\\.completed",
+        "withOnly": false,
+        "scored": true
+       }
+      ]
+     },
+     {
+      "score": 1,
+      "passed": true,
+      "turns": 17,
+      "costUsd": 0.26419000000000004,
+      "judgeCostUsd": 0,
+      "durationSeconds": 32,
+      "startedAt": "2026-11-23T22:34:49.542Z",
+      "error": null,
+      "tracePath": "/private/tmp/e-6k0C3B/out/trace.jsonl",
+      "skippedPaidGraders": false,
+      "graders": [
+       {
+        "name": "credit",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /credit",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "debit",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /debit",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "fraud",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched /fraud/checks",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "notifications",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched NotificationService|PaymentEventListener",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "payments-endpoint",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched POST\\s*/payments|/payments\\b",
+        "withOnly": false,
+        "scored": true
+       },
+       {
+        "name": "topic",
+        "passed": true,
+        "weight": 1,
+        "explanation": "matched payments\\.completed",
+        "withOnly": false,
+        "scored": true
+       }
+      ]
+     }
+    ]
+   },
+   "aggregates": {
+    "score": 1,
+    "passRate": 1,
+    "scoreWithout": 1,
+    "passRateWithout": 1,
+    "delta": 0
+   }
+  }
+ ],
+ "aggregates": {
+  "casesTotal": 4,
+  "casesPassed": 4,
+  "overallScore": 0.9722222222222222,
+  "overallPassRate": 0.9166666666666666,
+  "meanDelta": 0.02777777777777779
+ }
+}

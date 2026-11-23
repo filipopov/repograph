@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: gateway-service
+server:
+  port: 8080
+demobank:
+  services:
+    accounts-url: ${ACCOUNTS_URL:http://localhost:8081}
+    payments-url: ${PAYMENTS_URL:http://localhost:8082}
+    notifications-url: ${NOTIFICATIONS_URL:http://localhost:8083}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus

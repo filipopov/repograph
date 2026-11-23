@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: payments-service
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+server:
+  port: 8082
+demobank:
+  services:
+    accounts-url: ${ACCOUNTS_URL:http://localhost:8081}
+    fraud-url: ${FRAUD_URL:http://localhost:8084}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus

@@ -1,0 +1,11 @@
+schema_version: "1.1"
+name: account-currency
+description: "Change a field of a DTO returned by an internal endpoint and re-exposed by the public gateway"
+tags: [impact]
+context:
+  scaffold_script: setup.sh
+execution:
+  max_turns: 30
+  timeout_seconds: 600
+  allowed_tools: [Read, Glob, Grep]
+  append_system_prompt: "The Java workspace to analyse is ./demo-bank in the working directory. It contains the demo-bank repositories (bank-contracts, accounts-service, payments-service, fraud-service, gateway-service, notifications-service). Do not modify files."

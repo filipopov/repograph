@@ -1,0 +1,26 @@
+# Tag v<version> (matching .claude-plugin/plugin.json) to publish the jar that bin/repograph downloads.
+name: release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - name: Check tag matches plugin version
+        run: |
+          v=$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' .claude-plugin/plugin.json | head -1)
+          [ "v$v" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != plugin version $v"; exit 1; }
+      - run: mvn -B -DskipTests package
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: target/repograph.jar
+          generate_release_notes: true

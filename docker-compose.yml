@@ -1,0 +1,16 @@
+# Local Neo4j for repograph. Browser: http://localhost:7474 (neo4j / repograph-dev)
+name: repograph
+
+services:
+  neo4j:
+    image: neo4j:5.26-community
+    environment:
+      NEO4J_AUTH: neo4j/repograph-dev
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j-data:/data
+
+volumes:
+  neo4j-data:

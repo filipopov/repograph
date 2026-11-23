@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out shared contracts
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/bank-contracts
+          path: .contracts
+          ssh-key: ${{ secrets.CONTRACTS_DEPLOY_KEY }}
+          fetch-depth: 0
+      # A coordinated change uses the same branch name in every repo: build against the
+      # contracts from that branch when it exists, otherwise against main.
+      - name: Use matching contracts branch
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if git -C .contracts rev-parse --verify --quiet "origin/$BRANCH" > /dev/null; then
+            git -C .contracts checkout --quiet "$BRANCH"
+            echo "::notice::bank-contracts @ $BRANCH"
+          else
+            echo "::notice::bank-contracts @ main"
+          fi
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Install contracts
+        run: mvn -B -q install -DskipTests -f .contracts/pom.xml
+      - name: Build and test
+        run: mvn -B verify

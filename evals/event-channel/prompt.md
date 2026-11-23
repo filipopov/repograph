@@ -1,0 +1,1 @@
+We plan to remove `PaymentCompletedEvent.channel`. Who produces and who consumes this event, and what breaks? List every affected production source file (file name and repository), what has to change in it, and say which HTTP endpoints or Kafka topics carry the change. Ignore test code.

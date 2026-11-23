@@ -1,0 +1,16 @@
+{
+  "name": "repograph",
+  "version": "0.4.0",
+  "description": "Cross-repository code graph for Java microservices. Ask what breaks before you change a DTO, endpoint or Kafka event: Claude sees HTTP and Kafka links between repos that grep cannot.",
+  "author": { "name": "Filip Popov", "url": "https://github.com/filipopov" },
+  "homepage": "https://github.com/filipopov/repograph",
+  "repository": "https://github.com/filipopov/repograph",
+  "license": "MIT",
+  "keywords": ["java", "microservices", "impact-analysis", "code-graph", "neo4j", "mcp", "kafka", "spring"],
+  "mcpServers": {
+    "repograph": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/bin/repograph",
+      "args": ["serve"]
+    }
+  }
+}

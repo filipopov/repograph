@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Launcher used by the Claude Code plugin and usable on its own: `bin/repograph <command>`.
+#
+# Finds the repograph jar in this order: $REPOGRAPH_JAR, target/repograph.jar next to this script,
+# a cached download of the matching GitHub release. Needs Java 25+ ($REPOGRAPH_JAVA, $JAVA_HOME or PATH).
+# stdout is the MCP channel in `serve` mode, so every message here goes to stderr.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+VERSION="$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$ROOT/.claude-plugin/plugin.json" | head -1)"
+REPO="${REPOGRAPH_GITHUB_REPO:-filipopov/repograph}"
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/repograph"
+
+err() { echo "repograph: $*" >&2; }
+
+java_bin() {
+  if [[ -n "${REPOGRAPH_JAVA:-}" ]]; then echo "$REPOGRAPH_JAVA"
+  elif [[ -n "${JAVA_HOME:-}" && -x "$JAVA_HOME/bin/java" ]]; then echo "$JAVA_HOME/bin/java"
+  else command -v java || true
+  fi
+}
+
+find_jar() {
+  if [[ -n "${REPOGRAPH_JAR:-}" ]]; then echo "$REPOGRAPH_JAR"; return; fi
+  if [[ -f "$ROOT/target/repograph.jar" ]]; then echo "$ROOT/target/repograph.jar"; return; fi
+  local cached="$CACHE/repograph-$VERSION.jar"
+  if [[ ! -f "$cached" ]]; then
+    mkdir -p "$CACHE"
+    local url="https://github.com/$REPO/releases/download/v$VERSION/repograph.jar"
+    err "downloading $url"
+    if ! curl -fsSL "$url" -o "$cached.part"; then
+      rm -f "$cached.part"
+      err "no jar found. Build it with 'mvn package' in $ROOT, or set REPOGRAPH_JAR."
+      exit 1
+    fi
+    mv "$cached.part" "$cached"
+  fi
+  echo "$cached"
+}
+
+JAVA="$(java_bin)"
+if [[ -z "$JAVA" ]]; then
+  err "Java 25+ not found. Install it, or set REPOGRAPH_JAVA / JAVA_HOME."
+  exit 1
+fi
+MAJOR="$("$JAVA" -XshowSettings:properties -version 2>&1 | sed -n 's/^ *java.specification.version = //p')"
+if [[ "${MAJOR%%.*}" -lt 25 ]]; then
+  err "Java 25+ required, found $MAJOR at $JAVA. Set REPOGRAPH_JAVA or JAVA_HOME."
+  exit 1
+fi
+
+exec "$JAVA" -jar "$(find_jar)" "$@"

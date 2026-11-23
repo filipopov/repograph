@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "repograph": {
+      "command": "java",
+      "args": ["-jar", "/absolute/path/to/repograph/target/repograph.jar", "serve"],
+      "env": {
+        "REPOGRAPH_NEO4J_URI": "bolt://localhost:7687",
+        "REPOGRAPH_NEO4J_PASSWORD": "repograph-dev"
+      }
+    }
+  }
+}

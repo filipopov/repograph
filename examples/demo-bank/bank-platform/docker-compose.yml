@@ -1,0 +1,61 @@
+# Runs the whole demo-bank locally. Build the jars first: ./scripts/build-all.sh
+name: demo-bank
+
+x-service: &service
+  restart: unless-stopped
+  depends_on:
+    redpanda:
+      condition: service_healthy
+
+services:
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.2.7
+    command:
+      - redpanda
+      - start
+      - --mode=dev-container
+      - --smp=1
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+    ports:
+      - "19092:19092"
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true'"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  accounts-service:
+    <<: *service
+    build: ../accounts-service
+    ports: ["8081:8081"]
+
+  fraud-service:
+    <<: *service
+    build: ../fraud-service
+    ports: ["8084:8084"]
+
+  payments-service:
+    <<: *service
+    build: ../payments-service
+    ports: ["8082:8082"]
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+      ACCOUNTS_URL: http://accounts-service:8081
+      FRAUD_URL: http://fraud-service:8084
+
+  notifications-service:
+    <<: *service
+    build: ../notifications-service
+    ports: ["8083:8083"]
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+
+  gateway-service:
+    <<: *service
+    build: ../gateway-service
+    ports: ["8080:8080"]
+    environment:
+      ACCOUNTS_URL: http://accounts-service:8081
+      PAYMENTS_URL: http://payments-service:8082
+      NOTIFICATIONS_URL: http://notifications-service:8083

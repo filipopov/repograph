@@ -1,0 +1,13 @@
+{
+  "name": "repograph",
+  "owner": { "name": "Filip Popov", "url": "https://github.com/filipopov" },
+  "metadata": { "description": "repograph: cross-repo impact analysis for Java microservices" },
+  "plugins": [
+    {
+      "name": "repograph",
+      "source": "./",
+      "description": "Cross-repository code graph (types, REST endpoints, HTTP clients, Kafka topics) as MCP tools, plus an impact-analysis skill and /repograph:index and /repograph:impact commands.",
+      "category": "development"
+    }
+  ]
+}

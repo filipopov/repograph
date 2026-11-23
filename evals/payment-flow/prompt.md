@@ -1,0 +1,1 @@
+Trace what happens, service by service and in order, when a client calls `POST /api/v1/payments` on the gateway. For every hop name the calling class, the target service and endpoint or topic, and the handling class.
